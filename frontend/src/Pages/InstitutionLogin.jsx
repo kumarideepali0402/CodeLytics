@@ -6,6 +6,7 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Cookies from "js-cookie";
 import axios from "axios";
+import { API_BASE } from "../config/apiBase";
 import "react-toastify/dist/ReactToastify.css";
 import { handleError, handleSuccess } from "../utils/notification";
 import redirectByRole from "../utils/redirectByRole";
@@ -18,7 +19,7 @@ const institutionLoginSchema = z.object({
 
 //  Axios instance
 const api = axios.create({
-  baseURL: "http://localhost:3000/api",
+  baseURL: API_BASE,
   withCredentials: true,
   headers: {
     "Content-Type": "application/json",

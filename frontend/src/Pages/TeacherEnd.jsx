@@ -6,11 +6,12 @@ import { motion } from "framer-motion";
 import { BookmarkCheck } from "lucide-react";
 import { useNavigate } from "react-router";
 import axios from "axios";
+import { API_BASE } from "../config/apiBase";
 import { handleError } from "../utils/notification"
 
 
 const api =  axios.create({
-  baseURL : "http://localhost:3000/api",
+  baseURL : API_BASE,
   withCredentials: true,
   headers: {"Content-Type" :  "application/json"}
   

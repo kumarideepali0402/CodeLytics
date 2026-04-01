@@ -3,11 +3,11 @@ import { motion, AnimatePresence } from "framer-motion";
 import { PlusCircle, UserCheck } from "lucide-react";
 import { useNavigate } from "react-router";
 import axios from "axios"
+import { API_BASE } from "../config/apiBase";
 import {handleSuccess, handleError} from "../utils/notification"
 
-// CHANGED: baseURL was "localhost://3000" (invalid; no protocol, wrong path). Now uses full API base so requests hit http://localhost:3000/api/teacher/...
 const api = axios.create({
-  baseURL: "http://localhost:3000/api",
+  baseURL: API_BASE,
   withCredentials: true,
   headers: { "Content-Type": "application/json" },
 });

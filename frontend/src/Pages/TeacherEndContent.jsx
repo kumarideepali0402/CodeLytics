@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { displayPlatform, platformStyleClass } from "../utils/problemDisplay";
 import axios from "axios";
+import { API_BASE } from "../config/apiBase";
 import { handleError } from "../utils/notification";
 
 const diffBadge = (d) => {
@@ -24,7 +25,7 @@ const diffBadge = (d) => {
 };
 
 const api = axios.create({
-  baseURL: "http://localhost:3000/api",
+  baseURL: API_BASE,
   headers: { "Content-Type": "application/json" },
   withCredentials: true,
 });

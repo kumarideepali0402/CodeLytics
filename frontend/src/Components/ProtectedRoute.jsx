@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
-import axios from "axios"; 
+import axios from "axios";
+import { API_BASE } from "../config/apiBase";
 
 export default function ProtectedRoute({ role, element }) {
   const [loading, setLoading] = useState(true);
@@ -10,7 +11,7 @@ export default function ProtectedRoute({ role, element }) {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const response = await axios.get("http://localhost:3000/api/auth/check", {
+        const response = await axios.get(`${API_BASE}/auth/check`, {
           withCredentials: true,
         });
 

@@ -4,10 +4,11 @@ import { PlusCircle, BookmarkCheck } from "lucide-react";
 import { useNavigate, useParams } from "react-router";
 import { handleError, handleSuccess } from "../utils/notification";
 import axios  from "axios"
+import { API_BASE } from "../config/apiBase";
 
 
 const api = axios.create({
-  baseURL:"http://localhost:3000/api",
+  baseURL: API_BASE,
   withCredentials : true,
   headers : {"Content-type" : "application/json"} 
 })

@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Trash2, UserPlus } from "lucide-react";
 import axios from "axios";
+import { API_BASE } from "../config/apiBase";
 import { handleSuccess } from "../utils/notification";
 
 // Dummy data – no API integration for now
@@ -13,7 +14,7 @@ const DUMMY_COLLEGE_TEACHERS = [
 ];
 
 const api = axios.create({
-  baseURL :"http://localhost:3000/api",
+  baseURL : API_BASE,
   withCredentials: true,
   headers: {"Content-Type": "application/json"}
 })

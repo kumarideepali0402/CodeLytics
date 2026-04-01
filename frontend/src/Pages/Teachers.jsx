@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-
-const API_BASE = "http://localhost:3000/api"; // ✅ backend on 3000
+import { API_BASE } from "../config/apiBase";
 
 function Teachers() {
   const [teachers, setTeachers] = useState([]);

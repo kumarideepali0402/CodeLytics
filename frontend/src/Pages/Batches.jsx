@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-
-const API_BASE = import.meta.env(VITE_BASE_URL);
+import { API_BASE } from "../config/apiBase";
 
 function Batches() {
   const [batches, setBatches] = useState([]);

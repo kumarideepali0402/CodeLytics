@@ -3,12 +3,13 @@ import { motion, AnimatePresence } from "framer-motion";
 import { PlusCircle, Building2, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import { API_BASE } from "../config/apiBase";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { handleError, handleSuccess } from "../utils/notification";
 
 const api = axios.create({
-  baseURL: "http://localhost:3000/api",
+  baseURL: API_BASE,
   withCredentials: true,
   headers: { "Content-Type": "application/json" },
 });

@@ -1,10 +1,11 @@
 import { useMemo, useState, useEffect } from "react";
 import { Outlet, useLocation, useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
+import { API_BASE } from "../config/apiBase";
 import { LayoutGrid, Trophy, BarChart3, ListChecks } from "lucide-react";
 
 const api = axios.create({
-  baseURL: "http://localhost:3000/api",
+  baseURL: API_BASE,
   withCredentials: true,
   headers: { "Content-Type": "application/json" },
 });

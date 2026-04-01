@@ -3,9 +3,10 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Edit3, Save, X, ArrowLeft, Mail, IdCard, BookOpen, User, Plus } from "lucide-react";
 import axios from "axios";
+import { API_BASE } from "../config/apiBase";
 
 const api = axios.create({
-  baseURL: "http://localhost:3000/api",
+  baseURL: API_BASE,
   headers: { "Content-Type": "application/json" },
   withCredentials: true,
 });

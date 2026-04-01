@@ -6,6 +6,7 @@ import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { handleError, handleSuccess } from "../utils/notification";
 import axios from "axios";
+import { API_BASE } from "../config/apiBase";
 
 
 const DUMMY_COLLEGES = [
@@ -15,7 +16,7 @@ const DUMMY_COLLEGES = [
 ];
 
 const api = axios.create({
-    baseURL: "http://localhost:3000/api",
+    baseURL: API_BASE,
     withCredentials : true,
     headers: {"Content-Type" : "application/json"}
 })
