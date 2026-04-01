@@ -207,44 +207,26 @@ export const createProblem = async(req, res) => {
     })
   }
   
-  const { topicId, subTopicId, title, link, difficulty, platformId } = req.body;
+  const { title, link, difficulty, platformId } = req.body;
   const trimmedTitle  = typeof title === 'string' ? title.trim() : title;
   const trimmedLink  = typeof link === 'string' ? link.trim() : link;
   const trimmedDifficulty = typeof difficulty === 'string' ? difficulty.trim(): difficulty;
   const trimmedPlatformId = typeof platformId === 'string' ? platformId.trim(): platformId;
-  const trimmedSubTopicId  = typeof subTopicId === 'string' ? subTopicId.trim(): subTopicId;
-  const trimmedTopicId  = typeof topicId === 'string' ? topicId.trim(): topicId;
+ 
   
 
-  if (!trimmedTopicId|| !trimmedTitle|| !title|| !trimmedLink|| !trimmedDifficulty|| !trimmedPlatformId|| !trimmedSubTopicId ) {
+  if ( !trimmedTitle|| !title|| !trimmedLink|| !trimmedDifficulty|| !trimmedPlatformId ) {
     return res.status(400).json({
-      msg: "topicId, subtopicId, Title, Link, difficulty, platform Id is required"
+      msg: " Title, Link, difficulty, platform Id is required"
     })
   }
   try {
-    const topic  = await prisma.topic.findUnique({
-      where: {id: trimmedTopicId}
-    })
-
-    if(!topic || topic.createdBy !== teacherId) {
-      return res.status(400).json({
-        msg: "Topic doesn't exist "
-      })
-    }
-    const subTopic  = await prisma.subtopic.findUnique({
-      where: {id: trimmedSubTopicId}
-    })
-    if(!subTopic || subTopic.createdBy !== teacherId || subTopic.topicId !== trimmedTopicId) {
-      return res.status(400).json({
-        msg: "SubTopic doesn't exist "
-      })
-    }
+    
 
 
     const problem = await prisma.problem.create({
       data: {
-        topicId : trimmedTopicId,
-        subtopicId: trimmedSubTopicId, 
+         
         title: trimmedTitle, 
         link : trimmedLink,
         difficulty: trimmedDifficulty,
@@ -275,6 +257,71 @@ export const createProblem = async(req, res) => {
 
 
 
+// export const getAllProblems = async(req, res) => {
+
+
+//   const teacherId = req.user?.id;
+
+//   if(!teacherId) {
+//     return res.status(401).json({
+//       msg : "Failed to authenticate teacher"
+//     })
+//   }
+
+//   const {topicId, subTopicId} = req.query;
+
+//   const trimmedTopicId = typeof topicId === "string" ? topicId.trim() : topicId
+//   const trimmedSubTopicId = typeof subTopicId === "string" ? subTopicId.trim() : subTopicId
+
+  
+//   if(!trimmedSubTopicId || !trimmedTopicId) return res.status(400).json({
+//     msg : "topicId and subtopicId is required"
+//   })
+
+
+//   const topic = await prisma.topic.findUnique({
+//     where:{id: trimmedTopicId}
+//   })
+
+//   if(!topic || topic.createdBy !== teacherId ){
+//     return res.status(404).json({
+//       msg : "TOpic not found"
+//     })
+//   }
+
+
+//   const subTopic = await prisma.subtopic.findUnique({
+//     where:{id: trimmedSubTopicId}
+//   })
+
+//   if(!subTopic || subTopic.topicId !== trimmedTopicId){
+//      return res.status(404).json({
+//       msg : "Subtopic not found"
+//     })
+
+//   }
+
+
+//   try {
+//     const problems = await prisma.problem.findMany({
+//       where: {topicId: trimmedTopicId, subtopicId: trimmedSubTopicId}
+//     })
+
+//     return res.status(200).json({
+//       msg : "Problems fetched Successfully!",
+//       problems
+//     })
+    
+//   } catch (error) {
+//     return res.status(500).json({
+//       msg : "Error fetching the problem!",
+      
+//     })
+    
+//   }
+
+// }
+
 export const getAllProblems = async(req, res) => {
 
 
@@ -286,43 +333,9 @@ export const getAllProblems = async(req, res) => {
     })
   }
 
-  const {topicId, subTopicId} = req.query;
-
-  const trimmedTopicId = typeof topicId === "string" ? topicId.trim() : topicId
-  const trimmedSubTopicId = typeof subTopicId === "string" ? subTopicId.trim() : subTopicId
-
-  
-  if(!trimmedSubTopicId || !trimmedTopicId) return res.status(400).json({
-    msg : "topicId and subtopicId is required"
-  })
-
-
-  const topic = await prisma.topic.findUnique({
-    where:{id: trimmedTopicId}
-  })
-
-  if(!topic || topic.createdBy !== teacherId ){
-    return res.status(404).json({
-      msg : "TOpic not found"
-    })
-  }
-
-
-  const subTopic = await prisma.subtopic.findUnique({
-    where:{id: trimmedSubTopicId}
-  })
-
-  if(!subTopic || subTopic.topicId !== trimmedTopicId){
-     return res.status(404).json({
-      msg : "Subtopic not found"
-    })
-
-  }
-
-
   try {
     const problems = await prisma.problem.findMany({
-      where: {topicId: trimmedTopicId, subtopicId: trimmedSubTopicId}
+      where: { addedBy : teacherId }
     })
 
     return res.status(200).json({
@@ -347,18 +360,38 @@ export const assignHomework = async (req, res) => {
     return res.status(401).json({ msg: "Failed to authenticate!" });
   }
 
-  const { problemId, batchId } = req.body;
-  const trimmedProblemId =
-    typeof problemId === "string" ? problemId.trim() : problemId;
+  const { problemId, batchId, topicId, subTopicId, } = req.body;
+  const trimmedProblemId =typeof problemId === "string" ? problemId.trim() : problemId;
   const trimmedBatchId = typeof batchId === "string" ? batchId.trim() : batchId;
+  const trimmedSubTopicId  = typeof subTopicId === 'string' ? subTopicId.trim(): subTopicId;
+  const trimmedTopicId  = typeof topicId === 'string' ? topicId.trim(): topicId;
 
-  if (!trimmedProblemId || !trimmedBatchId) {
+  if (!trimmedProblemId || !trimmedBatchId ||!trimmedSubTopicId ||!trimmedTopicId) {
     return res.status(400).json({
-      msg: "problemId, batchId is required",
+      msg: "problemId, batchId , subtopicId, topicId is required",
     });
   }
 
   try {
+
+    const topic  = await prisma.topic.findUnique({
+      where: {id: trimmedTopicId}
+    })
+
+    if(!topic || topic.createdBy !== teacherId) {
+      return res.status(400).json({
+        msg: "Topic doesn't exist "
+      })
+    }
+    const subTopic  = await prisma.subtopic.findUnique({
+      where: {id: trimmedSubTopicId}
+    })
+    if(!subTopic || subTopic.createdBy !== teacherId || subTopic.topicId !== trimmedTopicId) {
+      return res.status(400).json({
+        msg: "SubTopic doesn't exist "
+      })
+    }
+
     const problem = await prisma.problem.findUnique({
       where: { id: trimmedProblemId },
     });
@@ -392,6 +425,8 @@ export const assignHomework = async (req, res) => {
       where: {
         problemId: trimmedProblemId,
         batchId: trimmedBatchId,
+        topicId: trimmedTopicId,
+        subtopicId: trimmedSubTopicId
       },
     });
     if (existing) {
@@ -405,6 +440,8 @@ export const assignHomework = async (req, res) => {
         problemId: trimmedProblemId,
         batchId: trimmedBatchId,
         assignedBy: teacherId,
+        topicId: trimmedTopicId,
+        subtopicId: trimmedSubTopicId
       },
       include: {
         problem: {
@@ -413,8 +450,7 @@ export const assignHomework = async (req, res) => {
             title: true,
             link: true,
             difficulty: true,
-            subtopicId: true,
-            topicId: true,
+          
           },
         },
         batch: { select: { id: true, name: true } },

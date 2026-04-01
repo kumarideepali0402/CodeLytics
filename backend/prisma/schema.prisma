@@ -7,7 +7,7 @@
 // =============================================================================
 generator client {
   provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  
 }
 // ↑ Tells Prisma: “Generate the JS/TS client into backend/src/generated/prisma.”
 //  Your code does:  import { PrismaClient } from "../generated/prisma/client"
@@ -158,7 +158,7 @@ model Topic {
 
   creator    User    @relation("UserTopicsCreated", fields: [createdBy], references: [id])
   subtopics  Subtopic[]
-  problems   Problem[]
+  problemAssignments   ProblemAssignment[]
   @@map("topic")
 }
 
@@ -167,10 +167,10 @@ model Subtopic {
   name       String
   topicId    String  @map("topic_id")
   createdBy  String  @map("created_by")
-  // Relations
+  
   topic      Topic   @relation(fields: [topicId], references: [id])
   creator    User    @relation("UserSubtopicsCreated", fields: [createdBy], references: [id])
-  problems   Problem[]
+  problemAssignments   ProblemAssignment[]
   @@map("subtopic")
 }
 
@@ -192,20 +192,17 @@ model Problem {
   link          String
   difficulty    Difficulty
   platformId    String     @map("platform_id")
-  topicId       String     @map("topic_id")
-  subtopicId    String     @map("subtopic_id")
+ 
   addedBy       String     @map("added_by")
 
   // Relations
   platform           Platform           @relation(fields: [platformId], references: [id])
-  topic              Topic              @relation(fields: [topicId], references: [id])
-  subtopic           Subtopic           @relation(fields: [subtopicId], references: [id])
+  
   addedByUser        User               @relation("ProblemAddedBy", fields: [addedBy], references: [id])
   problemAssignments ProblemAssignment[]
 
   @@index([platformId])
-  @@index([topicId])
-  @@index([subtopicId])
+ 
   @@index([difficulty])
   @@map("problem")
 }
@@ -216,18 +213,24 @@ model ProblemAssignment {
   batchId        String    @map("batch_id")
   assignedBy     String    @map("assigned_by")
   assignedDate   DateTime  @default(now()) @map("assigned_date")
+  topicId       String     @map("topic_id")
+  subtopicId    String     @map("subtopic_id")
 
   // Relations
   problem           Problem           @relation(fields: [problemId], references: [id])
   batch             Batch             @relation(fields: [batchId], references: [id])
   assignedByUser    User              @relation(fields: [assignedBy], references: [id])
+  topic              Topic              @relation(fields: [topicId], references: [id])
+  subtopic           Subtopic           @relation(fields: [subtopicId], references: [id])
   problemStatuses   ProblemStatus[]
 
+  @@index([topicId])
+  @@index([subtopicId])
   @@map("problem_assignment")
 }
 
 model ProblemStatus {
-  id                     String            @id @default(cuid()) @map("id")
+  id                     String             @id @default(cuid()) @map("id")
   problemAssignmentId     String            @map("problem_assignment_id")
   studentId               String            @map("student_id")
   status                  ProblemStatusType @default(PENDING)

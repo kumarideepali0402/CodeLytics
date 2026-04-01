@@ -12,14 +12,8 @@ import {
   Check,
   LayoutGrid,
 } from "lucide-react";
-import {
-  loadOutline,
-  recomputeAll,
-  defaultTopics,
-  normalizeOutlineShape,
-  displayPlatform,
-  platformStyleClass,
-} from "../utils/teacherBatchOutline";
+import { normalizeOutlineShape, recomputeAll } from "../utils/batchOutlineShape";
+import { displayPlatform, platformStyleClass } from "../utils/problemDisplay";
 import {
   loadStudentProgress,
   saveStudentProgress,
@@ -406,14 +400,8 @@ export default function ProblemList() {
 
   const progressStorageId = batchId || "demo";
 
-  const [rawOutline, setRawOutline] = useState(() => {
-    if (batchId) {
-      const loaded = loadOutline(batchId);
-      if (loaded) return loaded;
-      return [];
-    }
-    return defaultTopics;
-  });
+  // TODO: load outline from API when batchId is available (teacher + student views)
+  const [rawOutline, setRawOutline] = useState([]);
 
   const [progressMap, setProgressMap] = useState(() =>
     loadStudentProgress(progressStorageId)
@@ -462,36 +450,20 @@ export default function ProblemList() {
   }, [isStudentSheet, searchQuery]);
 
   useEffect(() => {
-    if (!batchId || !isTeacherBatch) return;
-    const loaded = loadOutline(batchId);
-    if (loaded) {
-      normalizeOutlineShape(loaded);
-      recomputeAll(loaded);
-      setRawOutline(loaded);
-    } else {
-      setRawOutline([]);
-    }
-  }, [batchId, isTeacherBatch, location.key, location.pathname]);
+    setRawOutline([]);
+    // TODO: GET outline for batchId (shared with Content tab) and setRawOutline
+  }, [batchId]);
 
   const studentData = useMemo(() => {
     if (!isStudentSheet) return [];
-    const base =
-      rawOutline.length > 0 ? rawOutline : batchId ? [] : defaultTopics;
-    if (!base.length) return [];
-    return applyProgressToOutline(structuredClone(base), progressMap);
-  }, [rawOutline, progressMap, batchId, isStudentSheet]);
-
-  /** When the batch has no saved outline, show built-in demo topics so the teacher always sees a scoreboard. */
-  const teacherUsingDemoOutline = Boolean(
-    isTeacherStandings && rawOutline.length === 0
-  );
+    if (!rawOutline.length) return [];
+    return applyProgressToOutline(structuredClone(rawOutline), progressMap);
+  }, [rawOutline, progressMap, isStudentSheet]);
 
   const teacherData = useMemo(() => {
     if (!isTeacherStandings) return [];
-    const base =
-      rawOutline.length > 0 ? rawOutline : defaultTopics;
-    if (!base.length) return [];
-    const normalized = structuredClone(base);
+    if (!rawOutline.length) return [];
+    const normalized = structuredClone(rawOutline);
     normalizeOutlineShape(normalized);
     recomputeAll(normalized);
     return stripPersonalFlagsForTeacherView(normalized);
@@ -853,15 +825,6 @@ export default function ProblemList() {
               <span className="text-slate-500">Students</span>{" "}
               <strong className="tabular-nums text-slate-900">{batchStudents.length}</strong>
             </span>
-          </div>
-        )}
-
-        {teacherUsingDemoOutline && (
-          <div className="mb-2 rounded-lg border border-amber-200 bg-amber-50/90 px-3 py-2 text-xs leading-snug text-amber-950 ring-1 ring-amber-200/80">
-            <strong className="font-semibold">Demo curriculum loaded.</strong> This batch has
-            no saved topics yet — showing sample topics and problems so you can try{" "}
-            <strong>Class standings</strong>. Add your own structure under{" "}
-            <strong>Content</strong> anytime.
           </div>
         )}
 

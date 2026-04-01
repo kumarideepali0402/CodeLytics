@@ -1,6 +1,8 @@
 import "dotenv/config";
 // Prisma 7 generates .ts; use extensionless path so tsx resolves to client.ts
-import { PrismaClient } from "../generated/prisma/client";
+
+import { PrismaClient } from "@prisma/client";
+
 import { PrismaPg } from "@prisma/adapter-pg";
 
 const adapter = new PrismaPg({
