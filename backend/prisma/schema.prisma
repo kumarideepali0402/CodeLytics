@@ -7,7 +7,7 @@
 // =============================================================================
 generator client {
   provider = "prisma-client"
-  
+  output   = "../src/generated/prisma"
 }
 // ↑ Tells Prisma: “Generate the JS/TS client into backend/src/generated/prisma.”
 //  Your code does:  import { PrismaClient } from "../generated/prisma/client"
