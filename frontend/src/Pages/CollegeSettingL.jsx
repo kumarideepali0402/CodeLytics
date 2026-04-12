@@ -5,8 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { handleError, handleSuccess } from "../utils/notification";
-import axios from "axios";
-import { API_BASE } from "../config/apiBase";
+import axiosClient from "../utils/axiosClient";
 
 
 const DUMMY_COLLEGES = [
@@ -15,11 +14,6 @@ const DUMMY_COLLEGES = [
   { id: "dummy-3", name: "LMN College", email: "info@lmn.edu" },
 ];
 
-const api = axios.create({
-    baseURL: API_BASE,
-    withCredentials : true,
-    headers: {"Content-Type" : "application/json"}
-})
 
 export default function CollegeSettingL() {
   const navigate = useNavigate();
@@ -32,7 +26,7 @@ export default function CollegeSettingL() {
       const fetchColleges = async() => {
   
            try {
-              const allColleges = await api.get('/college');
+              const allColleges = await axiosClient.get('/college');
               if(allColleges?.data.colleges)   setColleges(allColleges.data.colleges);
   
           } catch (err) {
@@ -50,7 +44,7 @@ export default function CollegeSettingL() {
     if(!newCollege?.name.trim() || !newCollege?.email.trim() || !newCollege?.password.trim()) return;
     setIsSubmitting(true);
     try {
-        const res = await api.post("/college/create",{
+        const res = await axiosClient.post("/college/create",{
             name :newCollege.name,
             email: newCollege.email,
             password: newCollege.password

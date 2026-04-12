@@ -13,9 +13,8 @@ import {
   PenLine,
 } from "lucide-react";
 import { displayPlatform, platformStyleClass } from "../utils/problemDisplay";
-import axios from "axios";
-import { API_BASE } from "../config/apiBase";
 import { handleError } from "../utils/notification";
+import axiosClient from "../utils/axiosClient";
 
 const diffBadge = (d) => {
   const base = "text-xs font-semibold px-2 py-0.5 rounded-full shrink-0";
@@ -24,11 +23,6 @@ const diffBadge = (d) => {
   return `${base} bg-rose-100 text-rose-800`;
 };
 
-const api = axios.create({
-  baseURL: API_BASE,
-  headers: { "Content-Type": "application/json" },
-  withCredentials: true,
-});
 
 export default function TeacherEndContent() {
   const { id: batchId } = useParams();
@@ -80,7 +74,7 @@ export default function TeacherEndContent() {
     
     const fetchBatchName = async () => {
       try {
-        const res = await api.get("/teacher/get-batch");
+        const res = await axiosClient.get("/teacher/get-batch");
         const batches = res.data?.batches ?? [];
         const matched = batches.find((b) => String(b.id) === String(batchId));
         setBatchName(matched?.name ?? null);
@@ -115,7 +109,7 @@ export default function TeacherEndContent() {
       return;
     }
     try {
-      const res = await api.post("/assignment/create-topic", { name: t });
+      const res = await axiosClient.post("/assignment/create-topic", { name: t });
       const created = res.data?.topic; // { id, name, createdBy }
       const newTopic = {
         serverTopicId: created.id,
@@ -135,7 +129,7 @@ export default function TeacherEndContent() {
   const addSubtopic = async() => {
     if (!newSubtopic.name.trim() || !selectedTopicId) return;
       try {
-        const res = await api.post("/assignment/create-subtopic",{
+        const res = await axiosClient.post("/assignment/create-subtopic",{
           topicId: selectedTopicId,
           name : newSubtopic.name 
         })
@@ -200,7 +194,7 @@ export default function TeacherEndContent() {
     e.preventDefault();
     if (!createProblemTarget) return;
     try {
-      const res = await api.post('/assignment/',{
+      const res = await axiosClient.post('/assignment/',{
 
 
       })

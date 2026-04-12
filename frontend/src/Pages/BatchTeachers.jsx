@@ -2,9 +2,8 @@ import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Trash2, UserPlus } from "lucide-react";
-import axios from "axios";
-import { API_BASE } from "../config/apiBase";
 import { handleSuccess } from "../utils/notification";
+import axiosClient from "../utils/axiosClient";
 
 // Dummy data – no API integration for now
 const DUMMY_COLLEGE_TEACHERS = [
@@ -12,12 +11,6 @@ const DUMMY_COLLEGE_TEACHERS = [
   { id: "2", name: "Prof. Neha Verma", email: "neha@gmail.com", teacherEnrollmentId: "T002" },
   { id: "3", name: "Mr. Raj Kumar", email: "raj@gmail.com", teacherEnrollmentId: "T003" },
 ];
-
-const api = axios.create({
-  baseURL : API_BASE,
-  withCredentials: true,
-  headers: {"Content-Type": "application/json"}
-})
 
 
 
@@ -36,7 +29,7 @@ export default function BatchTeachers() {
   useEffect(() => {
     const fetchTeachers = async () => {
       try {
-        const res = await api.get("/teacher/get");
+        const res = await axiosClient.get("/teacher/get");
         const t = res.data?.teachers;
         if (t) setDropdownTeacher(t);
       } catch (error) {
@@ -51,7 +44,7 @@ export default function BatchTeachers() {
     if (!batchId) return;
     const fetchBatchTeachers = async () => {
       try {
-        const res = await api.get(`/batch/get/${batchId}/teachers`);
+        const res = await axiosClient.get(`/batch/get/${batchId}/teachers`);
         const teachers = res.data?.teachers;
         if (Array.isArray(teachers)) setBatchTeachers(teachers);
       } catch (error) {
@@ -79,7 +72,7 @@ export default function BatchTeachers() {
       return;
     }
     try {
-      await api.post("/batch/createTeacher", {
+      await axiosClient.post("/batch/createTeacher", {
         batchId,
         teacherId: selectedTeacherId,
       });
@@ -104,7 +97,7 @@ export default function BatchTeachers() {
     try {
  
 
-      await api.delete(`/batch/deleteTeacher${teacherBatchId}`);
+      await axiosClient.delete(`/batch/deleteTeacher${teacherBatchId}`);
       handleSuccess("Teacher removed from the batch");
       setBatchTeachers((prev) =>prev.filter((t) => t.id!==teacherBatchId))
     } catch (err) {

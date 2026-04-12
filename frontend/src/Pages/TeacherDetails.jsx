@@ -2,14 +2,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Edit3, Save, X, ArrowLeft, Mail, IdCard, BookOpen, User, Plus } from "lucide-react";
-import axios from "axios";
-import { API_BASE } from "../config/apiBase";
-
-const api = axios.create({
-  baseURL: API_BASE,
-  headers: { "Content-Type": "application/json" },
-  withCredentials: true,
-});
+import axiosClient from "../utils/axiosClient";
 
 function getInitials(name) {
   return name
@@ -39,7 +32,7 @@ export default function TeacherDetails() {
     if (!id) return;
     async function fetchTeacherById() {
       try {
-        const res = await api.get(`/teacher/get/${id}`);
+        const res = await axiosClient.get(`/teacher/get/${id}`);
         const t = res.data?.teacher ?? null;
         setTeacher(t);
         if (t) {
@@ -62,7 +55,7 @@ export default function TeacherDetails() {
   useEffect(() => {
     async function fetchAllBatches() {
       try {
-        const res = await api.get("/batch/get");
+        const res = await axiosClient.get("/batch/get");
         const list = res.data?.batches ?? [];
         setAllBatches(Array.isArray(list) ? list : []);
       } catch (_) {
@@ -79,7 +72,7 @@ export default function TeacherDetails() {
     setSaveError("");
     setSaving(true);
     try {
-      const res = await api.patch(`/teacher/update/${id}`, {
+      const res = await axiosClient.patch(`/teacher/update/${id}`, {
         name: formData.name,
         email: formData.email,
         teacherEnrollmentId: formData.teacherEnrollmentId,

@@ -1,14 +1,7 @@
 import { useMemo, useState, useEffect } from "react";
 import { Outlet, useLocation, useNavigate, useParams } from "react-router-dom";
-import axios from "axios";
-import { API_BASE } from "../config/apiBase";
 import { LayoutGrid, Trophy, BarChart3, ListChecks } from "lucide-react";
-
-const api = axios.create({
-  baseURL: API_BASE,
-  withCredentials: true,
-  headers: { "Content-Type": "application/json" },
-});
+import axiosClient from "../utils/axiosClient";
 
 const navItems = [
   {
@@ -67,7 +60,7 @@ export default function TeacherEndBatch() {
     let cancelled = false;
     (async () => {
       try {
-        const res = await api.get("/teacher/get-batch");
+        const res = await axiosClient.get("/teacher/get-batch");
         const list = res.data?.batches ?? [];
         const b = Array.isArray(list)
           ? list.find((x) => String(x?.id) === String(batchId))

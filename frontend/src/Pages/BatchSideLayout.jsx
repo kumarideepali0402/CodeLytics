@@ -6,15 +6,8 @@ import {
   ListChecks,
   GraduationCap,
 } from "lucide-react";
-import axios from "axios";
-import { API_BASE } from "../config/apiBase";
 import { useState, useEffect } from "react";
-
-const api = axios.create({
-  baseURL: API_BASE,
-  withCredentials: true,
-  headers: { "Content-Type": "application/json" },
-});
+import axiosClient from "../utils/axiosClient";
 
 const navItems = [
   {
@@ -52,7 +45,7 @@ export default function BatchSideLayout() {
     let cancelled = false;
     (async () => {
       try {
-        const res = await api.get(`/batch/get/${batchId}`);
+        const res = await axiosClient.get(`/batch/get/${batchId}`);
         const name = res.data?.batch?.name;
         if (!cancelled) {
           setBatchName(name ?? "");

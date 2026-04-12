@@ -5,18 +5,8 @@ import { useState , useEffect} from "react";
 import { motion } from "framer-motion";
 import { BookmarkCheck } from "lucide-react";
 import { useNavigate } from "react-router";
-import axios from "axios";
-import { API_BASE } from "../config/apiBase";
 import { handleError } from "../utils/notification"
-
-
-const api =  axios.create({
-  baseURL : API_BASE,
-  withCredentials: true,
-  headers: {"Content-Type" :  "application/json"}
-  
-
-})
+import axiosClient from "../utils/axiosClient";
 
 
 
@@ -40,7 +30,7 @@ export default function TeacherEnd() {
   useEffect(() => {
     const fetchBatchesOfTeacher = async () => {
       try {
-        const res = await api.get("/teacher/get-batch");
+        const res = await axiosClient.get("/teacher/get-batch");
         const list = res.data?.batches ?? [];
         setBatches(Array.isArray(list) ? list : []);
       } catch {
@@ -49,7 +39,7 @@ export default function TeacherEnd() {
     };
     const fetchProblemBank = async () => {
       try {
-        const res = await api.get("/assignment/get-all-problems");
+        const res = await axiosClient.get("/assignment/get-all-problems");
         const list = res.data?.problems ?? [];
         setProblemCount(Array.isArray(list) ? list.length : 0);
       } catch {

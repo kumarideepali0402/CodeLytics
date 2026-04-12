@@ -2,15 +2,8 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { PlusCircle, UserCheck } from "lucide-react";
 import { useNavigate } from "react-router";
-import axios from "axios"
-import { API_BASE } from "../config/apiBase";
 import {handleSuccess, handleError} from "../utils/notification"
-
-const api = axios.create({
-  baseURL: API_BASE,
-  withCredentials: true,
-  headers: { "Content-Type": "application/json" },
-});
+import axiosClient from "../utils/axiosClient";
 
 export default function TeacherSetting() {
   const navigate = useNavigate();
@@ -34,7 +27,7 @@ export default function TeacherSetting() {
       try {
         setIsLoadTeacher(true);
         setTeacherFetchError(""); // CHANGED: clear previous error on new fetch so old "Failed to load teachers" doesn't persist
-        const res = await api.get("/teacher/get");
+        const res = await axiosClient.get("/teacher/get");
         const teacherList = res?.data?.teachers ?? []; // CHANGED: was setTeachers(teachers) storing whole axios response; now store only the teachers array
         setTeachers(teacherList);
         if (teacherList.length === 0) {
@@ -63,7 +56,7 @@ export default function TeacherSetting() {
     e.preventDefault();
     if (!newTeacher.name.trim() || !newTeacher.email.trim() || !newTeacher.teacherEnrollmentId.trim() || !newTeacher.password) return;
     try {
-      const res = await api.post("/teacher/add", {
+      const res = await axiosClient.post("/teacher/add", {
         name: newTeacher.name,
         email: newTeacher.email,
         teacherEnrollmentId: newTeacher.teacherEnrollmentId,

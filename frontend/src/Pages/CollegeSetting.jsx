@@ -2,17 +2,11 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { PlusCircle, Building2, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
-import { API_BASE } from "../config/apiBase";
 import { ToastContainer } from "react-toastify";
+import axiosClient from "../utils/axiosClient";
 import "react-toastify/dist/ReactToastify.css";
 import { handleError, handleSuccess } from "../utils/notification";
 
-const api = axios.create({
-  baseURL: API_BASE,
-  withCredentials: true,
-  headers: { "Content-Type": "application/json" },
-});
 
 export default function CollegeSetting() {
   const navigate = useNavigate();
@@ -27,7 +21,7 @@ export default function CollegeSetting() {
     const fetchColleges = async () => {
       try {
         setFetchError(null);
-        const res = await api.get("/college");
+        const res = await axiosClient.get("/college");
         if (res.data?.colleges) setColleges(res.data.colleges);
       } catch (err) {
         const msg = err.response?.data?.message || err.response?.data?.error || "Failed to load colleges.";
@@ -45,7 +39,7 @@ export default function CollegeSetting() {
     if (!newCollege.name?.trim() || !newCollege.email?.trim() || !newCollege.password) return;
     setIsSubmitting(true);
     try {
-      const res = await api.post("/college/register", {
+      const res = await axiosClient.post("/college/register", {
         name: newCollege.name.trim(),
         email: newCollege.email.trim(),
         password: newCollege.password,

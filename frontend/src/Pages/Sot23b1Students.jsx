@@ -1,20 +1,13 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Trash2 } from "lucide-react";
-import axios from "axios"
-import { API_BASE } from "../config/apiBase";
 import { ToastContainer } from "react-toastify";
+import axiosClient from "../utils/axiosClient";
 import "react-toastify/dist/ReactToastify.css";
 import {useParams} from "react-router-dom"
 import {handleSuccess, handleError} from "../utils/notification"
 
 
-const api = axios.create({
-  baseURL: API_BASE,
-  withCredentials: true,
-  headers:{"Content-Type": "application/json"}
-
-})
 
 export default function Students() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -27,7 +20,7 @@ export default function Students() {
 
   useEffect(() => {
     const fetchBatchStudent= async() =>{
-      const res = await api.get(`/student/get/${batchId}`);
+      const res = await axiosClient.get(`/student/get/${batchId}`);
       setStudents(res.data?.students.map((s) => s.student) ?? []);
       
       setBatchName(res.data?.batchName);
@@ -40,7 +33,7 @@ export default function Students() {
   const handleAddStudent = async(e) => {
     try {
       e.preventDefault();
-      const res = await api.post(`/student/create`, {
+      const res = await axiosClient.post(`/student/create`, {
         batchId,
         name:newStudent.name,
         email:newStudent.email,

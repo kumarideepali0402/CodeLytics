@@ -5,11 +5,10 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Cookies from "js-cookie";
-import axios from "axios";
-import { API_BASE } from "../config/apiBase";
 import "react-toastify/dist/ReactToastify.css";
 import { handleError, handleSuccess } from "../utils/notification";
 import redirectByRole from "../utils/redirectByRole";
+import axiosClient from "../utils/axiosClient";
 
 //  Validation schema using Zod
 const loginSchema = z.object({
@@ -17,15 +16,6 @@ const loginSchema = z.object({
   password: z
     .string()
     .min(8, { message: "Password should be at least 8 characters" }),
-});
-
-//  Create Axios instance with cookies enabled
-const api = axios.create({
-  baseURL: API_BASE,
-   withCredentials: true,  //Sends & receives cookies automatically
-  headers: {
-    "Content-Type": "application/json",
-  },
 });
 
 function StudentLogin() {
@@ -47,7 +37,7 @@ function StudentLogin() {
         role: "STUDENT",
       };
 
-      const res = await api.post("/auth/login", payload);
+      const res = await axiosClient.post("/auth/login", payload);
 
       const { user, message } = res.data;
 

@@ -225,14 +225,12 @@ export const createProblem = async(req, res) => {
 
 
     const problem = await prisma.problem.create({
-      data: {
-         
+      data: { 
         title: trimmedTitle, 
         link : trimmedLink,
         difficulty: trimmedDifficulty,
         platformId: trimmedPlatformId,
         addedBy: teacherId
-
       }
 
 

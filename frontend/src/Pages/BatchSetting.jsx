@@ -3,15 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { PlusCircle, BookmarkCheck } from "lucide-react";
 import { useNavigate, useParams } from "react-router";
 import { handleError, handleSuccess } from "../utils/notification";
-import axios  from "axios"
-import { API_BASE } from "../config/apiBase";
-
-
-const api = axios.create({
-  baseURL: API_BASE,
-  withCredentials : true,
-  headers : {"Content-type" : "application/json"} 
-})
+import axiosClient from "../utils/axiosClient";
 
 export default function BatchSetting() {
   const navigate = useNavigate();
@@ -37,7 +29,7 @@ export default function BatchSetting() {
   //   async function getBatches() {
   //     try {
   //       setIsBatchLoading(true);
-  //       const res = await api.get("/batch/get");
+  //       const res = await axiosClient.get("/batch/get");
   //       if (res.data?.batches) setBatches(res.data.batches);
   //       setIsBatchLoading(false);
   //       if(batches.length == 0) setIsZeroBatch(true)
@@ -54,7 +46,7 @@ export default function BatchSetting() {
       try {
         setIsBatchLoading(true);
         showBatchError("");
-        const res = await api.get("/batch/get");
+        const res = await axiosClient.get("/batch/get");
         if (res.data?.batches) {
           setBatches(res.data.batches);
           // Check length from response; setState is async so batches.length here would still be stale.
@@ -75,7 +67,7 @@ export default function BatchSetting() {
   //   e.preventDefault();
   //   if(!newBatch.name) return;
   //   try {
-  //     const newBatch = await api.post("/batch/create", { name : newBatch.name, collegeId });
+  //     const newBatch = await axiosClient.post("/batch/create", { name : newBatch.name, collegeId });
   //     handleSuccess("Batch Created");
   //     setBatches([...batches, newBatch])
   //   } catch (error) {
@@ -88,7 +80,7 @@ export default function BatchSetting() {
     if (!newBatch?.name?.trim()) return;
     try {
       // Backend gets collegeId from the auth token; don't send it. Use res (not const newBatch) to avoid shadowing state.
-      const res = await api.post("/batch/create", { name: newBatch.name.trim() });
+      const res = await axiosClient.post("/batch/create", { name: newBatch.name.trim() });
       const createdBatch = res.data?.batch;
       if (createdBatch) {
         handleSuccess("Batch created.");

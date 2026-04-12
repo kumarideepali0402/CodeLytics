@@ -6,25 +6,15 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Cookies from "js-cookie";
-import axios from "axios";
-import { API_BASE } from "../config/apiBase";
 import "react-toastify/dist/ReactToastify.css";
 import { handleError, handleSuccess } from "../utils/notification";
 import redirectByRole from "../utils/redirectByRole";
+import axiosClient from "../utils/axiosClient";
 
 //  Validation schema
 const loginSchema = z.object({
   email: z.string().email({ message: "Invalid email" }),
   password: z.string().min(6, { message: "Password should be at least 6 characters" }),
-});
-
-//  Axios instance 
-const api = axios.create({
-  baseURL: API_BASE,
-  withCredentials: true,
-  headers: {
-    "Content-Type": "application/json",
-  },
 });
 
 function TeacherLogin() {
@@ -47,7 +37,7 @@ function TeacherLogin() {
         role: "TEACHER",
       };
 
-      const res = await api.post("/auth/login", payload);
+      const res = await axiosClient.post("/auth/login", payload);
       const { user, message } = res.data;
 
       if (user?.role) {

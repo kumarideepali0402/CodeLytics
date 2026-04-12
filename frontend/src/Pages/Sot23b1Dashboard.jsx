@@ -6,15 +6,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import axios from "axios";
-import { API_BASE } from "../config/apiBase";
-
-
-const api = axios.create({
-  baseURL : API_BASE,
-  withCredentials : true,
-  headers: {"Content-Type" : "application/json"}
-})
+import axiosClient from "../utils/axiosClient";
 
 export default function Dashboard() {
 
@@ -25,12 +17,12 @@ export default function Dashboard() {
 
     useEffect(()=>{
       const fetchBatchStudent = async() => {
-        const res = await api.get(`/student/get/${batchId}`);
+        const res = await axiosClient.get(`/student/get/${batchId}`);
         const students = res.data?.students ?? [];
         setStudentCount(students.length);
       } 
        const fetchBatchTeacher = async() => {
-        const res = await api.get(`/batch/get/${batchId}/teachers`);
+        const res = await axiosClient.get(`/batch/get/${batchId}/teachers`);
         const teachers = res.data?.teachers ??[];
         setTeacherCount(teachers.length);
       } 
