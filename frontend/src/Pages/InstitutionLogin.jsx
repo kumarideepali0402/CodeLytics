@@ -46,19 +46,19 @@ function InstitutionLogin() {
       };
 
       const res = await api.post("/auth/login", payload);
-      const { user, message } = res.data;
+      const { user, msg } = res.data;
 
       if (user?.role) {
         Cookies.set("role", user.role, { expires: 7 });
         Cookies.set("loggedInUser", user.name, { expires: 7 });
-        handleSuccess(message || "Login Successfully");
+        handleSuccess(msg || "Login Successfully");
         redirectByRole(user.role, navigate);
       } else {
-        handleError(message || "Login failed");
+        handleError(msg || "Login failed");
       }
     } catch (err) {
       console.error("Login error:", err);
-      handleError(err.response?.data?.message || "Invalid login credentials!");
+      handleError(err.response?.data?.msg || "Invalid login credentials!");
     }
   };
 

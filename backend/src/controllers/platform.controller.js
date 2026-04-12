@@ -24,6 +24,9 @@ export const createPlatform = async (req, res) => {
       data: {
         name: platformName,
       },
+      select :{
+        id
+      }
     });
 
     return res.status(201).json({

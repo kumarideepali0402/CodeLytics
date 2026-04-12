@@ -215,7 +215,7 @@ export const createProblem = async(req, res) => {
  
   
 
-  if ( !trimmedTitle|| !title|| !trimmedLink|| !trimmedDifficulty|| !trimmedPlatformId ) {
+  if ( !trimmedTitle|| !trimmedLink|| !trimmedDifficulty|| !trimmedPlatformId ) {
     return res.status(400).json({
       msg: " Title, Link, difficulty, platform Id is required"
     })
@@ -254,73 +254,6 @@ export const createProblem = async(req, res) => {
 
 
 }
-
-
-
-// export const getAllProblems = async(req, res) => {
-
-
-//   const teacherId = req.user?.id;
-
-//   if(!teacherId) {
-//     return res.status(401).json({
-//       msg : "Failed to authenticate teacher"
-//     })
-//   }
-
-//   const {topicId, subTopicId} = req.query;
-
-//   const trimmedTopicId = typeof topicId === "string" ? topicId.trim() : topicId
-//   const trimmedSubTopicId = typeof subTopicId === "string" ? subTopicId.trim() : subTopicId
-
-  
-//   if(!trimmedSubTopicId || !trimmedTopicId) return res.status(400).json({
-//     msg : "topicId and subtopicId is required"
-//   })
-
-
-//   const topic = await prisma.topic.findUnique({
-//     where:{id: trimmedTopicId}
-//   })
-
-//   if(!topic || topic.createdBy !== teacherId ){
-//     return res.status(404).json({
-//       msg : "TOpic not found"
-//     })
-//   }
-
-
-//   const subTopic = await prisma.subtopic.findUnique({
-//     where:{id: trimmedSubTopicId}
-//   })
-
-//   if(!subTopic || subTopic.topicId !== trimmedTopicId){
-//      return res.status(404).json({
-//       msg : "Subtopic not found"
-//     })
-
-//   }
-
-
-//   try {
-//     const problems = await prisma.problem.findMany({
-//       where: {topicId: trimmedTopicId, subtopicId: trimmedSubTopicId}
-//     })
-
-//     return res.status(200).json({
-//       msg : "Problems fetched Successfully!",
-//       problems
-//     })
-    
-//   } catch (error) {
-//     return res.status(500).json({
-//       msg : "Error fetching the problem!",
-      
-//     })
-    
-//   }
-
-// }
 
 export const getAllProblems = async(req, res) => {
 

@@ -38,19 +38,24 @@ export default function Students() {
   },[batchId])
 
   const handleAddStudent = async(e) => {
-    e.preventDefault();
-    const res = await api.post(`/student/create`, {
-      batchId,
-      name:newStudent.name,
-      email:newStudent.email,
-      password: newStudent.password,
-     });
-     const student = res.data.student;
-     
-     handleSuccess(res.data?.msg);
-     setStudents([...students, student]);
-     setNewStudent({ id: "", name: "", email: "" , password:""});
-     setIsModalOpen(false);
+    try {
+      e.preventDefault();
+      const res = await api.post(`/student/create`, {
+        batchId,
+        name:newStudent.name,
+        email:newStudent.email,
+        password: newStudent.password,
+       });
+       const student = res.data.student;
+       
+       handleSuccess(res.data?.msg);
+       setStudents([...students, student]);
+       setNewStudent({ id: "", name: "", email: "" , password:""});
+       setIsModalOpen(false);
+    } catch (error) {
+      handleError(res.data?.msg)
+      
+    }
 
   };
 
