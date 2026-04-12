@@ -1,8 +1,9 @@
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import prisma from "../db/prisma.js";
+
 const JWT_SECRET = process.env.JWT_SECRET;
-const REFRESH_SECRET = process.env.REFRESH_SECRET;
+const REFRESH_SECRET = process.env.REFRESH_SECRET
 const COLLEGE = "COLLEGE";
 const STUDENT = "STUDENT";
 const TEACHER = "TEACHER";
