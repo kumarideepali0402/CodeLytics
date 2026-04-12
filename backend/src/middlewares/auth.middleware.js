@@ -13,7 +13,7 @@ export const authDynamic = (req, res, next) => {
     const decoded = jwt.verify(token, JWT_SECRET);
     req.user = {
       id: decoded.id,
-      email: decoded.email,
+      emailId: decoded.emailId,
       role: decoded.role,
     };
     next();
@@ -22,12 +22,15 @@ export const authDynamic = (req, res, next) => {
   }
 };
 
+
+
 export const authCollege = (req, res, next) => {
   if (req.user?.role !== "COLLEGE") {
     return res.status(403).json({ message: "Access denied: College only" });
   }
   next();
 };
+
 
 export const authStudent = (req, res, next) => {
   if (req.user?.role !== "STUDENT") {
@@ -36,9 +39,13 @@ export const authStudent = (req, res, next) => {
   next();
 };
 
+
+
 export const authTeacher = (req, res, next) => {
   if (req.user?.role !== "TEACHER") {
     return res.status(403).json({ message: "Access denied: Teacher only" });
   }
   next();
 };
+
+

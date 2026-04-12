@@ -1,6 +1,8 @@
 
 import './App.css'
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes, useNavigate } from 'react-router-dom'
+import { useEffect } from 'react'
+import { setNavigate } from './utils/axiosClient'
 import StudentLogin from './Pages/StudentLogin'
 import Homepage from './Pages/Homepage'
 import TeacherLogin from "./Pages/TeacherLogin";
@@ -34,7 +36,11 @@ import TeacherDetails from './Pages/TeacherDetails';
 
 
 function App() {
- 
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    setNavigate(navigate);
+  }, [navigate]);
 
   return (
     <>

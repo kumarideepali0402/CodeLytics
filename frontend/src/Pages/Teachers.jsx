@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
-import { API_BASE } from "../config/apiBase";
+import axiosClient from "../utils/axiosClient";
 
 function Teachers() {
   const [teachers, setTeachers] = useState([]);
@@ -10,7 +9,7 @@ function Teachers() {
   // Fetch teachers (⚠️ Make sure backend has /teacher/get implemented)
   const fetchTeachers = async () => {
     try {
-      const res = await axios.get(`${API_BASE}/teacher/get`, { withCredentials: true });
+      const res = await axiosClient.get("/teacher/get");
       setTeachers(res.data || []);
     } catch (err) {
       console.error("Error fetching teachers:", err);
@@ -21,11 +20,7 @@ function Teachers() {
   const addTeacher = async () => {
     if (!teacherName.trim() || !teacherEmail.trim()) return;
     try {
-      await axios.post(
-        `${API_BASE}/teacher/add`,
-        { name: teacherName, email: teacherEmail },
-        { withCredentials: true }
-      );
+      await axiosClient.post("/teacher/add", { name: teacherName, email: teacherEmail });
       setTeacherName("");
       setTeacherEmail("");
       fetchTeachers();
@@ -37,7 +32,7 @@ function Teachers() {
   // Delete teacher
   const deleteTeacher = async (id) => {
     try {
-      await axios.delete(`${API_BASE}/teacher/delete/${id}`, { withCredentials: true });
+      await axiosClient.delete(`/teacher/delete/${id}`);
       fetchTeachers();
     } catch (err) {
       console.error("Error deleting teacher:", err);

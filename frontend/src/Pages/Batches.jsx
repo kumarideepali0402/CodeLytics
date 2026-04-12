@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
-import { API_BASE } from "../config/apiBase";
+import axiosClient from "../utils/axiosClient";
 
 function Batches() {
   const [batches, setBatches] = useState([]);
@@ -9,7 +8,7 @@ function Batches() {
   // Fetch existing batches
   const fetchBatches = async () => {
     try {
-      const res = await axios.get(`${API_BASE}/batch/get`, { withCredentials: true });
+      const res = await axiosClient.get("/batch/get");
       setBatches(res.data || []);
     } catch (err) {
       console.error("Error fetching batches:", err);
@@ -20,11 +19,7 @@ function Batches() {
   const createBatch = async () => {
     if (!batchName.trim()) return;
     try {
-      await axios.post(
-        `${API_BASE}/batch/create`,
-        { name: batchName },
-        { withCredentials: true }
-      );
+      await axiosClient.post("/batch/create", { name: batchName });
       setBatchName("");
       fetchBatches(); // refresh
     } catch (err) {
@@ -35,7 +30,7 @@ function Batches() {
   // Delete batch
   const deleteBatch = async (id) => {
     try {
-      await axios.delete(`${API_BASE}/batch/delete/${id}`, { withCredentials: true });
+      await axiosClient.delete(`/batch/delete/${id}`);
       fetchBatches();
     } catch (err) {
       console.error("Error deleting batch:", err);
