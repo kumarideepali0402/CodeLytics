@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import {
   Plus,
@@ -8,9 +8,6 @@ import {
   ChevronRight,
   ListTree,
   Eye,
-  X,
-  Loader2,
-  PenLine,
 } from "lucide-react";
 import { displayPlatform, platformStyleClass } from "../utils/problemDisplay";
 import { handleError } from "../utils/notification";
@@ -49,19 +46,12 @@ export default function TeacherEndContent() {
   // ── Subtopic accordion  ─────────────────────────────────
   const [expandedSubtopicId, setExpandedSubtopicId] = useState(null);
 
-  // ── Create-problem modal ───────────────────────────────────────────────────
-  const [createProblemTarget, setCreateProblemTarget] = useState(null); 
-  const [createProblemForm, setCreateProblemForm] = useState({
-    title: "",
-    link: "",
-    difficulty: "EASY",
-    platformId: "",
-  });
-  const [platforms, setPlatforms] = useState([]);
-  const [platformsLoading, setPlatformsLoading] = useState(false);
-  const [createProblemSubmitting, setCreateProblemSubmitting] = useState(false);
+  // ── Track which topics have already had subtopics fetched ─────────────────
+  const loadedTopicIds = useRef(new Set());
 
   // ── Derived: find selected topic by ID ────────────────────────────────────
+  // Fixed: was using t.id which doesn't exist on our data shape — topics are
+  // stored with serverTopicId (mapped from API's id field on fetch)
   const topic = data.find((t) => t.serverTopicId === selectedTopicId) ?? null;
   const topicSubtopics = topic?.subtopics ?? [];
 
@@ -85,16 +75,57 @@ export default function TeacherEndContent() {
     fetchBatchName();
   }, [batchId, isTeacherBatch]);
 
+  useEffect(()=>{
+    const fetchTopics = async() => {
+    const fetchedTopics = await axiosClient('/assignment/get-all-topics');
+    setData(fetchedTopics.data.topics.map(t => ({serverTopicId: t.id, title: t.name, subtopics:[]})));
+  }
+  fetchTopics();
+  }, [])
+
   // ── Auto-select first topic when data loads ────────────────────────────────
+  // Fixed: was using data[0].id which is undefined — correct field is serverTopicId
   useEffect(() => {
     if (data.length > 0 && !selectedTopicId) {
       setSelectedTopicId(data[0].serverTopicId);
     }
   }, [data]);
 
-  // ── Collapse subtopics when switching topics ───────────────────────────────
+  // ── Collapse subtopics + lazy-fetch subtopics when switching topics ─────────
+  // When a topic is selected:
+  //   1. Collapse any open subtopic accordion
+  //   2. If this topic's subtopics haven't been fetched yet, fetch them now
+  //      (lazy — only fetches when the teacher actually clicks the topic)
+  //   3. loadedTopicIds ref acts as a cache so we don't re-fetch on every click
+  //   4. Maps the API response { id, name } into our data shape { serverSubtopicId, name, problems }
   useEffect(() => {
     setExpandedSubtopicId(null);
+    if (!selectedTopicId) return;
+    if (loadedTopicIds.current.has(selectedTopicId)) return; // already fetched, skip
+
+    const fetchSubtopics = async () => {
+      try {
+        const res = await axiosClient.get(`/assignment/get-all-subtopics/${selectedTopicId}`);
+        loadedTopicIds.current.add(selectedTopicId); // mark as fetched
+        setData((prev) =>
+          prev.map((t) =>
+            t.serverTopicId === selectedTopicId
+              ? {
+                  ...t,
+                  subtopics: res.data.subTopics.map((s) => ({
+                    serverSubtopicId: s.id,
+                    name: s.name,
+                    problems: [],
+                  })),
+                }
+              : t
+          )
+        );
+      } catch (e) {
+        console.log(e);
+      }
+    };
+    fetchSubtopics();
   }, [selectedTopicId]);
 
   // ── Handlers ───────────────────────────────────────────────────────────────
@@ -112,7 +143,7 @@ export default function TeacherEndContent() {
       const res = await axiosClient.post("/assignment/create-topic", { name: t });
       const created = res.data?.topic; // { id, name, createdBy }
       const newTopic = {
-        serverTopicId: created.id,
+        id: created.id,
         title: created.name,
         subtopics: [],         
       };
@@ -141,7 +172,7 @@ export default function TeacherEndContent() {
             t.serverTopicId === selectedTopicId ? {
             ...t,
              subtopics: [
-              ...t.subtopics,
+              ...(t.subtopics ?? []),
               {
                 serverSubtopicId: subtopic.id,
                 name : subtopic.name,
@@ -156,6 +187,9 @@ export default function TeacherEndContent() {
       ) 
           
         )
+
+
+      
         setNewSubtopic({ name: "" });
         setAddSubtopicForTopic(false);
         
@@ -177,34 +211,6 @@ export default function TeacherEndContent() {
         subtopicId,
       },
     });
-  };
-
-  const openCreateProblemModal = (topicId, subtopicId) => {
-    setCreateProblemForm({ title: "", link: "", difficulty: "EASY", platformId: "" });
-    setCreateProblemTarget({ topicId, subtopicId }); // ✅ store IDs
-    // TODO: fetch platforms
-  };
-
-  const closeCreateProblemModal = () => {
-    setCreateProblemTarget(null);
-    setCreateProblemSubmitting(false);
-  };
-
-  const handleCreateProblemSubmit = async (e) => {
-    e.preventDefault();
-    if (!createProblemTarget) return;
-    try {
-      const res = await axiosClient.post('/assignment/',{
-
-
-      })
-      
-    } catch (error) {
-      
-    }
-
-
-  
   };
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -262,7 +268,10 @@ export default function TeacherEndContent() {
                 </p>
                 <nav className="space-y-0.5">
                   {data.map((t) => (
-                    // ✅ key is now the stable DB id, not the array index
+                    // Fixed: key, onClick, and active-class check were all using t.id
+                    // which doesn't exist — topics are stored with serverTopicId.
+                    // Using t.id was setting selectedTopicId to undefined on click,
+                    // so the subtopic fetch guard bailed and nothing rendered.
                     <button
                       key={t.serverTopicId}
                       type="button"
@@ -446,17 +455,7 @@ export default function TeacherEndContent() {
                                 <button
                                   type="button"
                                   onClick={() =>
-                                    openCreateProblemModal(topic.serverTopicId, sub.serverSubtopicId)
-                                  }
-                                  className="inline-flex items-center gap-1 rounded-md bg-slate-900 px-2.5 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-slate-800"
-                                >
-                                  <PenLine className="h-3.5 w-3.5" aria-hidden />
-                                  Create problem
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    goAssignProblems(topic.serverTopicId, sub.serverSubtopicId)
+                                    goAssignProblems(topic.id, sub.serverSubtopicId)
                                   }
                                   className="rounded-md bg-white px-2.5 py-1.5 text-xs font-semibold text-amber-800 ring-1 ring-amber-200 hover:bg-amber-50"
                                 >
@@ -470,10 +469,9 @@ export default function TeacherEndContent() {
                             <div className="border-t border-slate-100 p-3">
                               {sub.problems.length === 0 ? (
                                 <p className="py-3 text-center text-xs text-slate-500">
-                                  No problems yet.{" "}
-                                  <strong className="text-slate-700">Create problem</strong>{" "}
-                                  (new) or{" "}
-                                  <strong className="text-slate-700">Assign from bank</strong>.
+                                  No problems yet. Use{" "}
+                                  <strong className="text-slate-700">Assign from bank</strong>{" "}
+                                  to add problems.
                                 </p>
                               ) : (
                                 <ul className="divide-y divide-slate-100 rounded-lg border border-slate-100 bg-slate-50/40">
@@ -521,129 +519,6 @@ export default function TeacherEndContent() {
         )}
       </div>
 
-      {/* ── Create-problem modal ── */}
-      {createProblemTarget && (
-        <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/50 p-4 backdrop-blur-sm sm:items-center"
-          role="presentation"
-          onClick={closeCreateProblemModal}
-        >
-          <div
-            className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="create-problem-modal-title"
-          >
-            <div className="flex items-start justify-between gap-3">
-              <h2
-                id="create-problem-modal-title"
-                className="text-lg font-bold text-slate-900"
-              >
-                Create problem in this subtopic
-              </h2>
-              <button
-                type="button"
-                onClick={closeCreateProblemModal}
-                className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"
-                aria-label="Close"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleCreateProblemSubmit} className="mt-5 flex flex-col gap-3">
-              <div>
-                <label className="mb-1 block text-xs font-semibold text-slate-600">Title</label>
-                <input
-                  type="text"
-                  value={createProblemForm.title}
-                  onChange={(e) =>
-                    setCreateProblemForm((p) => ({ ...p, title: e.target.value }))
-                  }
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                  required
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-xs font-semibold text-slate-600">URL</label>
-                <input
-                  type="url"
-                  value={createProblemForm.link}
-                  onChange={(e) =>
-                    setCreateProblemForm((p) => ({ ...p, link: e.target.value }))
-                  }
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                  placeholder="https://…"
-                  required
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-xs font-semibold text-slate-600">Difficulty</label>
-                <select
-                  value={createProblemForm.difficulty}
-                  onChange={(e) =>
-                    setCreateProblemForm((p) => ({ ...p, difficulty: e.target.value }))
-                  }
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                >
-                  <option value="EASY">Easy</option>
-                  <option value="MEDIUM">Medium</option>
-                  <option value="HARD">Hard</option>
-                </select>
-              </div>
-              <div>
-                <label className="mb-1 block text-xs font-semibold text-slate-600">Platform</label>
-                {platformsLoading ? (
-                  <div className="flex items-center gap-2 py-2 text-sm text-slate-500">
-                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                    Loading platforms…
-                  </div>
-                ) : (
-                  <select
-                    value={createProblemForm.platformId}
-                    onChange={(e) =>
-                      setCreateProblemForm((p) => ({ ...p, platformId: e.target.value }))
-                    }
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                    required
-                  >
-                    <option value="">Select platform</option>
-                    {platforms.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name}
-                      </option>
-                    ))}
-                  </select>
-                )}
-              </div>
-              <div className="flex justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={closeCreateProblemModal}
-                  className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={createProblemSubmitting || platformsLoading || !platforms.length}
-                  className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {createProblemSubmitting ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                      Saving…
-                    </>
-                  ) : (
-                    "Create"
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

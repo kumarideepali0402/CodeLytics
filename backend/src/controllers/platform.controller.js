@@ -1,6 +1,5 @@
 import prisma from "../db/prisma.js";
 
-// CHANGED: All response messages use "msg" key (was "error"/"message" before; standardised).
 
 export const createPlatform = async (req, res) => {
   try {
@@ -25,7 +24,8 @@ export const createPlatform = async (req, res) => {
         name: platformName,
       },
       select :{
-        id
+        id: true,
+        name : true
       }
     });
 

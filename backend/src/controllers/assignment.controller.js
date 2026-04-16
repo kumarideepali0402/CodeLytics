@@ -229,25 +229,24 @@ export const createProblem = async(req, res) => {
         title: trimmedTitle, 
         link : trimmedLink,
         difficulty: trimmedDifficulty,
-        platformId: trimmedPlatformId,
-        addedBy: teacherId
+        platform: { connect: {id: trimmedPlatformId}},
+        addedByUser: {connect: {id: teacherId}}
       }
 
 
     })
 
     return res.status(201).json({
-      msg : "Problem created successfully!",
+      msg : "Problem creating successfully!",
       problem
      })
     
 
   } catch (error) {
+    console.log(error);
     return res.status(500).json({
-      msg : "Error created the Problem!",
-      
+      msg : "Error creating the Problem!",
      })
-    
   }
 
 
@@ -266,7 +265,14 @@ export const getAllProblems = async(req, res) => {
 
   try {
     const problems = await prisma.problem.findMany({
-      where: { addedBy : teacherId }
+      where: { addedBy : teacherId },
+      select: {
+        id : true,
+        title :true,
+        link : true,
+        platformId:true,
+        difficulty: true 
+      }
     })
 
     return res.status(200).json({

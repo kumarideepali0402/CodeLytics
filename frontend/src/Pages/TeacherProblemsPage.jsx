@@ -1,12 +1,13 @@
-import { useState } from "react";
+import { useState , useEffect} from "react";
 import { Link } from "react-router-dom";
 import { Library, Sparkles, Plus, X } from "lucide-react";
+import axiosClient from "../utils/axiosClient"
 
 const initialForm = {
-  name: "",
+  title: "",
   link: "",
-  difficulty: "Easy",
-  platform: "LeetCode",
+  difficulty: "EASY",
+  platformId: "",
 };
 
 export default function TeacherProblemsPage() {
@@ -14,14 +15,50 @@ export default function TeacherProblemsPage() {
   const [isAddPlatformOpen, setIsAddPlatformOpen] = useState(false);
   const [newProblem, setNewProblem] = useState(initialForm);
   const [platformName, setPlatformName] = useState("");
+  const [platforms, setPlatforms] = useState([]);
+  const [problems, setProblems] = useState([]);
+  const [selectedIds, setSelectedIds] = useState(new Set());
+
+
 
   const openModal = () => setIsAddModalOpen(true);
   const closeModal = () => setIsAddModalOpen(false);
 
-  const handleAddProblem = (e) => {
+
+  useEffect (()=>{
+     const fetchPlatforms =  async() => {
+    const fetchedPlatform = await axiosClient.get('/platform/all');
+    setPlatforms(fetchedPlatform.data.platforms);
+
+  }
+  fetchPlatforms()
+   
+
+
+  }, [])
+  useEffect(() => {
+     const handleGetProblems = async() => {
+      try {
+        const fetchedProblems = await axiosClient.get('/assignment/get-all-problems');
+        setProblems(fetchedProblems.data?.problems);
+      } catch (error) {
+        console.log(error);
+
+        
+      }
+    }
+    handleGetProblems();
+  }, [])
+ 
+
+  const handleAddProblem = async(e) => {
+    console.log("reached");
+    
     e.preventDefault();
-    if (!newProblem.name?.trim() || !newProblem.link?.trim()) return;
-    // TODO: POST create problem API with payload (title, link, difficulty, platformId/topic/subtopic as needed)
+    if (!newProblem.title?.trim() || !newProblem.link?.trim() || !newProblem.platformId) return;
+    const createdProblem = await axiosClient.post('/assignment/create-problem', newProblem);
+    console.log("problem created");
+    setProblems((prev) => [...prev, createdProblem.data.problem]);
     setNewProblem(initialForm);
     closeModal();
   };
@@ -68,23 +105,104 @@ export default function TeacherProblemsPage() {
         </header>
 
         <div className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-sm ring-1 ring-slate-100">
-          <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
-            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-500">
-              <Sparkles className="h-7 w-7" aria-hidden />
+          {problems.length === 0 ? (
+            <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
+              <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-500">
+                <Sparkles className="h-7 w-7" aria-hidden />
+              </div>
+              <p className="text-base font-semibold text-slate-800">No problems yet</p>
+              <p className="mt-1 max-w-md text-sm text-slate-600">
+                Add your first problem to get started.
+              </p>
+              <button
+                type="button"
+                onClick={openModal}
+                className="mt-5 inline-flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 text-sm font-semibold text-amber-950 shadow-sm hover:bg-amber-400"
+              >
+                <Plus className="h-4 w-4" aria-hidden />
+                Add problem
+              </button>
             </div>
-            <p className="text-base font-semibold text-slate-800">Problem bank</p>
-            <p className="mt-1 max-w-md text-sm text-slate-600">
-              Wire your API here to load problems, add entries, and assign to batches.
-            </p>
-            <button
-              type="button"
-              onClick={openModal}
-              className="mt-5 inline-flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 text-sm font-semibold text-amber-950 shadow-sm hover:bg-amber-400"
-            >
-              <Plus className="h-4 w-4" aria-hidden />
-              Add problem
-            </button>
-          </div>
+          ) : (
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-100 bg-slate-50/70 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  <th className="px-4 py-3 w-10">
+                    <input
+                      type="checkbox"
+                      className="rounded border-slate-300 accent-amber-500"
+                      checked={selectedIds.size === problems.length}
+                      onChange={(e) =>
+                        setSelectedIds(
+                          e.target.checked ? new Set(problems.map((p) => p.id)) : new Set()
+                        )
+                      }
+                    />
+                  </th>
+                  <th className="px-4 py-3">Title</th>
+                  <th className="px-4 py-3">Platform</th>
+                  <th className="px-4 py-3">Difficulty</th>
+                  <th className="px-4 py-3">Link</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {problems.map((problem) => {
+                  const platformName =
+                    platforms.find((pl) => pl.id === problem.platformId)?.name ?? "—";
+                  const difficultyStyles = {
+                    EASY: "bg-emerald-50 text-emerald-700 ring-emerald-200",
+                    MEDIUM: "bg-amber-50 text-amber-700 ring-amber-200",
+                    HARD: "bg-red-50 text-red-700 ring-red-200",
+                  };
+                  return (
+                    <tr
+                      key={problem.id}
+                      className="transition hover:bg-slate-50/60"
+                    >
+                      <td className="px-4 py-3">
+                        <input
+                          type="checkbox"
+                          className="rounded border-slate-300 accent-amber-500"
+                          checked={selectedIds.has(problem.id)}
+                          onChange={(e) => {
+                            const next = new Set(selectedIds);
+                            e.target.checked ? next.add(problem.id) : next.delete(problem.id);
+                            setSelectedIds(next);
+                          }}
+                        />
+                      </td>
+                      <td className="px-4 py-3 font-medium text-slate-900">
+                        {problem.title}
+                      </td>
+                      <td className="px-4 py-3 text-slate-600">{platformName}</td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset ${difficultyStyles[problem.difficulty] ?? ""}`}
+                        >
+                          {problem.difficulty.charAt(0) + problem.difficulty.slice(1).toLowerCase()}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <a
+                          href={problem.link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-amber-700 hover:text-amber-500 hover:underline"
+                        >
+                          Open
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                            <polyline points="15 3 21 3 21 9" />
+                            <line x1="10" y1="14" x2="21" y2="3" />
+                          </svg>
+                        </a>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
 
@@ -116,11 +234,19 @@ export default function TeacherProblemsPage() {
             </div>
 
             <form
-              onSubmit={(e) => {
+              onSubmit={async(e) => {
                 e.preventDefault();
-                // TODO: POST /api/platform/create with { name: platformName }
-                setPlatformName("");
-                setIsAddPlatformOpen(false);
+                try {
+                  const platform = await axiosClient.post('/platform/create', {
+                    name : platformName
+                  })
+                  setPlatforms([...platforms, platform.data.platform])
+                  setPlatformName("");
+                  setIsAddPlatformOpen(false);
+                } catch (error) {
+                  handleError(error?.response?.data?.msg);
+                  
+                }
               }}
               className="mt-5 flex flex-col gap-4"
             >
@@ -207,15 +333,20 @@ export default function TeacherProblemsPage() {
                 </label>
                 <select
                   id="pb-platform"
-                  value={newProblem.platform}
+                  value={newProblem.platformId}
+                  label = "platformId"
                   onChange={(e) =>
-                    setNewProblem({ ...newProblem, platform: e.target.value })
+                    setNewProblem({ ...newProblem, platformId: e.target.value })
                   }
                   className="w-full rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-2.5 text-sm font-medium text-slate-900 outline-none ring-amber-200 transition focus:border-amber-400 focus:bg-white focus:ring-2"
                 >
-                  <option value="GFG">GFG</option>
-                  <option value="LeetCode">LeetCode</option>
-                  <option value="Codeforces">Codeforces</option>
+                  <option value="">Select Platform</option>
+
+                  {platforms.map((p)=>(
+                    <option key = {p.id}value={p.id}>{p.name}</option>
+
+                  ))}
+        
                 </select>
               </div>
               <div>
@@ -229,9 +360,9 @@ export default function TeacherProblemsPage() {
                   id="pb-name"
                   type="text"
                   placeholder="e.g. Two Sum"
-                  value={newProblem.name}
+                  value={newProblem.title}
                   onChange={(e) =>
-                    setNewProblem({ ...newProblem, name: e.target.value })
+                    setNewProblem({ ...newProblem, title: e.target.value })
                   }
                   className="w-full rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-2.5 text-sm outline-none ring-amber-200 transition focus:border-amber-400 focus:bg-white focus:ring-2"
                   required
@@ -271,9 +402,9 @@ export default function TeacherProblemsPage() {
                   }
                   className="w-full rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-2.5 text-sm font-medium outline-none ring-amber-200 transition focus:border-amber-400 focus:bg-white focus:ring-2"
                 >
-                  <option>Easy</option>
-                  <option>Medium</option>
-                  <option>Hard</option>
+                  <option value="EASY">Easy</option>
+                  <option value="MEDIUM">Medium</option>
+                  <option value="HARD">Hard</option>
                 </select>
               </div>
               <div className="flex justify-end gap-2 pt-2">

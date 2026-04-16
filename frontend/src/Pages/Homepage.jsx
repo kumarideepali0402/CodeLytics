@@ -19,7 +19,7 @@ export default function Homepage() {
       {/* hero-section */}
       <section id="hero-section" className='relative w-full h-screen '>
       <div className='absolute inset-0 flex items-center align-center justify-center mt-45'>
-          <button onClick={()=>navigate("/college-setting")} className="text-black font-bold px-12 py-4  bg-white border-2 border-black border-dotted z-10">Get Started</button>
+          <button onClick={()=>navigate("/entry")} className="text-black font-bold px-12 py-4  bg-white border-2 border-black border-dotted z-10">Get Started</button>
        </div> 
         <video ref={videoRef} className='w-full h-full object-fill' autoPlay muted playsInline>
           <source src="https://res.cloudinary.com/deanuec4t/video/upload/v1756584128/Codelytics_rczect.mp4" type='video/mp4' />
