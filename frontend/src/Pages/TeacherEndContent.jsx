@@ -33,7 +33,10 @@ export default function TeacherEndContent() {
   const [batchName, setBatchName] = useState(null);
 
   // ── Topic selection (by ID, not index) ────────────────────────────────────
-  const [selectedTopicId, setSelectedTopicId] = useState(null);
+  const [selectedTopicId, setSelectedTopicId] = useState(location.state?.selectedTopicId ?? null);
+  const pendingExpandSubtopicIds = useRef(
+    location.state?.expandedSubtopicIds?.length ? new Set(location.state.expandedSubtopicIds) : null
+  );
 
   // ── New-topic form ─────────────────────────────────────────────────────────
   const [newTopicMode, setNewTopicMode] = useState(false);
@@ -44,14 +47,17 @@ export default function TeacherEndContent() {
   const [newSubtopic, setNewSubtopic] = useState({ name: "" });
 
   // ── Subtopic accordion  ─────────────────────────────────
-  const [expandedSubtopicId, setExpandedSubtopicId] = useState(null);
+  const [expandedSubtopicIds, setExpandedSubtopicIds] = useState(new Set());
 
-  // ── Track which topics have already had subtopics fetched ─────────────────
+  // ── Loading states ────────────────────────────────────────────────────────
+  const [loadingTopics, setLoadingTopics] = useState(true);
+  const [loadingSubtopicsTopicId, setLoadingSubtopicsTopicId] = useState(null);
+  const [loadingProblemIds, setLoadingProblemIds] = useState(new Set());
+
+  // ── Track which topics/subtopics have already been fetched ────────────────
   const loadedTopicIds = useRef(new Set());
+  const loadedSubtopicIds = useRef(new Set());
 
-  // ── Derived: find selected topic by ID ────────────────────────────────────
-  // Fixed: was using t.id which doesn't exist on our data shape — topics are
-  // stored with serverTopicId (mapped from API's id field on fetch)
   const topic = data.find((t) => t.serverTopicId === selectedTopicId) ?? null;
   const topicSubtopics = topic?.subtopics ?? [];
 
@@ -77,36 +83,42 @@ export default function TeacherEndContent() {
 
   useEffect(()=>{
     const fetchTopics = async() => {
-    const fetchedTopics = await axiosClient('/assignment/get-all-topics');
-    setData(fetchedTopics.data.topics.map(t => ({serverTopicId: t.id, title: t.name, subtopics:[]})));
-  }
-  fetchTopics();
+      try {
+        const fetchedTopics = await axiosClient('/assignment/get-all-topics');
+        setData(fetchedTopics.data.topics.map(t => ({serverTopicId: t.id, title: t.name, subtopics:[]})));
+      } finally {
+        setLoadingTopics(false);
+      }
+    }
+    fetchTopics();
   }, [])
-
-  // ── Auto-select first topic when data loads ────────────────────────────────
-  // Fixed: was using data[0].id which is undefined — correct field is serverTopicId
   useEffect(() => {
     if (data.length > 0 && !selectedTopicId) {
       setSelectedTopicId(data[0].serverTopicId);
     }
   }, [data]);
 
-  // ── Collapse subtopics + lazy-fetch subtopics when switching topics ─────────
-  // When a topic is selected:
-  //   1. Collapse any open subtopic accordion
-  //   2. If this topic's subtopics haven't been fetched yet, fetch them now
-  //      (lazy — only fetches when the teacher actually clicks the topic)
-  //   3. loadedTopicIds ref acts as a cache so we don't re-fetch on every click
-  //   4. Maps the API response { id, name } into our data shape { serverSubtopicId, name, problems }
+  // Restore previously expanded subtopics on return navigation
   useEffect(() => {
-    setExpandedSubtopicId(null);
+    if (!pendingExpandSubtopicIds.current) return;
+    if (topicSubtopics.length === 0) return;
+    const pending = pendingExpandSubtopicIds.current;
+    pendingExpandSubtopicIds.current = null;
+    topicSubtopics.forEach((s) => {
+      if (pending.has(s.serverSubtopicId)) toggleSubtopicExpanded(s.serverSubtopicId);
+    });
+  }, [topicSubtopics]);
+
+   useEffect(() => {
+    setExpandedSubtopicIds(new Set());
     if (!selectedTopicId) return;
     if (loadedTopicIds.current.has(selectedTopicId)) return; // already fetched, skip
 
     const fetchSubtopics = async () => {
+      setLoadingSubtopicsTopicId(selectedTopicId);
       try {
         const res = await axiosClient.get(`/assignment/get-all-subtopics/${selectedTopicId}`);
-        loadedTopicIds.current.add(selectedTopicId); // mark as fetched
+        loadedTopicIds.current.add(selectedTopicId);
         setData((prev) =>
           prev.map((t) =>
             t.serverTopicId === selectedTopicId
@@ -123,14 +135,50 @@ export default function TeacherEndContent() {
         );
       } catch (e) {
         console.log(e);
+      } finally {
+        setLoadingSubtopicsTopicId(null);
       }
     };
     fetchSubtopics();
   }, [selectedTopicId]);
 
   // ── Handlers ───────────────────────────────────────────────────────────────
-  const toggleSubtopicExpanded = (subtopicId) =>
-    setExpandedSubtopicId((prev) => (prev === subtopicId ? null : subtopicId));
+  const toggleSubtopicExpanded = async (subtopicId) => {
+    const isExpanding = !expandedSubtopicIds.has(subtopicId);
+    setExpandedSubtopicIds((prev) => {
+      const next = new Set(prev);
+      isExpanding ? next.add(subtopicId) : next.delete(subtopicId);
+      return next;
+    });
+
+    if (isExpanding && batchId && !loadedSubtopicIds.current.has(subtopicId)) {
+      loadedSubtopicIds.current.add(subtopicId);
+      setLoadingProblemIds((prev) => new Set(prev).add(subtopicId));
+      try {
+        const res = await axiosClient.get(
+          `/assignment/get-assigned-problems/${batchId}/${subtopicId}`
+        );
+        const fetched = res.data?.problems ?? [];
+        setData((prev) =>
+          prev.map((t) => ({
+            ...t,
+            subtopics: t.subtopics.map((s) =>
+              s.serverSubtopicId === subtopicId ? { ...s, problems: fetched } : s
+            ),
+          }))
+        );
+      } catch (e) {
+        console.log(e);
+        loadedSubtopicIds.current.delete(subtopicId);
+      } finally {
+        setLoadingProblemIds((prev) => {
+          const next = new Set(prev);
+          next.delete(subtopicId);
+          return next;
+        });
+      }
+    }
+  };
 
   
   const addTopic = async () => {
@@ -207,8 +255,9 @@ export default function TeacherEndContent() {
         assignMode: true,
         batchId,
         returnPath: `/teacher/${batchId}/content`,
-        topicId,     
+        topicId,
         subtopicId,
+        expandedSubtopicIds: [...expandedSubtopicIds],
       },
     });
   };
@@ -239,7 +288,7 @@ export default function TeacherEndContent() {
                   className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
                 >
                   <ListTree className="h-3.5 w-3.5" />
-                  My Problem List
+                  My Problem Bank
                 </button>
                 <button
                   type="button"
@@ -247,7 +296,7 @@ export default function TeacherEndContent() {
                   className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
                 >
                   <Eye className="h-3.5 w-3.5" />
-                  Open batch problem list
+                  Assigned Problems
                 </button>
               </div>
             )}
@@ -267,7 +316,14 @@ export default function TeacherEndContent() {
                   Topics
                 </p>
                 <nav className="space-y-0.5">
-                  {data.map((t) => (
+                  {loadingTopics ? (
+                    <div className="flex items-center justify-center gap-1 py-4 text-xs text-slate-400">
+                      <span className="animate-bounce [animation-delay:0ms]">·</span>
+                      <span className="animate-bounce [animation-delay:150ms]">·</span>
+                      <span className="animate-bounce [animation-delay:300ms]">·</span>
+                    </div>
+                  ) : null}
+                  {!loadingTopics && data.map((t) => (
                     // Fixed: key, onClick, and active-class check were all using t.id
                     // which doesn't exist — topics are stored with serverTopicId.
                     // Using t.id was setting selectedTopicId to undefined on click,
@@ -285,9 +341,6 @@ export default function TeacherEndContent() {
                     >
                       <span className="min-w-0 flex-1 truncate font-medium text-slate-900">
                         {t.title}
-                      </span>
-                      <span className="shrink-0 text-[10px] text-slate-400">
-                        {t.subtopics?.length ?? 0} st
                       </span>
                     </button>
                   ))}
@@ -405,7 +458,16 @@ export default function TeacherEndContent() {
 
                   {/* Subtopics list */}
                   <div className="space-y-3">
-                    {topicSubtopics.length === 0 && !addSubtopicForTopic && (
+                    {loadingSubtopicsTopicId === selectedTopicId ? (
+                      <div className="flex items-center gap-2 rounded-lg border border-dashed border-slate-200 bg-slate-50/80 px-3 py-5 text-center text-xs text-slate-500 justify-center">
+                        <span className="inline-flex gap-1">
+                          <span className="animate-bounce [animation-delay:0ms]">·</span>
+                          <span className="animate-bounce [animation-delay:150ms]">·</span>
+                          <span className="animate-bounce [animation-delay:300ms]">·</span>
+                        </span>
+                        Loading subtopics
+                      </div>
+                    ) : topicSubtopics.length === 0 && !addSubtopicForTopic && (
                       <p className="rounded-lg border border-dashed border-slate-200 bg-slate-50/80 px-3 py-5 text-center text-xs text-slate-600">
                         No subtopics yet. Add one above, then assign problems from your bank.
                       </p>
@@ -413,7 +475,7 @@ export default function TeacherEndContent() {
 
                     {topicSubtopics.map((sub) => {
                       // ✅ expanded check uses subtopic ID, not array index
-                      const expanded = expandedSubtopicId === sub.serverSubtopicId;
+                      const expanded = expandedSubtopicIds.has(sub.serverSubtopicId);
                       return (
                         <section
                           key={sub.serverSubtopicId}
@@ -455,7 +517,7 @@ export default function TeacherEndContent() {
                                 <button
                                   type="button"
                                   onClick={() =>
-                                    goAssignProblems(topic.id, sub.serverSubtopicId)
+                                    goAssignProblems(topic.serverTopicId, sub.serverSubtopicId)
                                   }
                                   className="rounded-md bg-white px-2.5 py-1.5 text-xs font-semibold text-amber-800 ring-1 ring-amber-200 hover:bg-amber-50"
                                 >
@@ -466,42 +528,52 @@ export default function TeacherEndContent() {
                           </div>
 
                           {expanded && (
-                            <div className="border-t border-slate-100 p-3">
-                              {sub.problems.length === 0 ? (
+                            <div className="border-t border-slate-100 bg-gradient-to-br from-slate-100/80 via-white/60 to-indigo-50/60 p-3">
+                              {loadingProblemIds.has(sub.serverSubtopicId) ? (
+                                <div className="flex items-center justify-center gap-2 py-4 text-xs text-slate-500">
+                                  <span className="inline-flex gap-1">
+                                    <span className="animate-bounce [animation-delay:0ms]">·</span>
+                                    <span className="animate-bounce [animation-delay:150ms]">·</span>
+                                    <span className="animate-bounce [animation-delay:300ms]">·</span>
+                                  </span>
+                                  Loading problems
+                                </div>
+                              ) : sub.problems.length === 0 ? (
                                 <p className="py-3 text-center text-xs text-slate-500">
                                   No problems yet. Use{" "}
                                   <strong className="text-slate-700">Assign from bank</strong>{" "}
                                   to add problems.
                                 </p>
                               ) : (
-                                <ul className="divide-y divide-slate-100 rounded-lg border border-slate-100 bg-slate-50/40">
+                                <ul className="space-y-2">
                                   {sub.problems.map((p) => (
-                                    // ✅ key uses stable problemId not array index
                                     <li
                                       key={p.problemId}
-                                      className="flex flex-wrap items-center gap-2 px-3 py-2 text-sm sm:flex-nowrap"
+                                      className="flex items-center gap-3 rounded-xl border border-white/60 bg-white/40 px-4 py-2.5 text-sm shadow-sm backdrop-blur-md backdrop-saturate-150"
                                     >
-                                      <span className={diffBadge(p.difficulty)}>
-                                        {p.difficulty}
-                                      </span>
-                                      <span
-                                        className={platformStyleClass(displayPlatform(p))}
-                                        title={displayPlatform(p)}
-                                      >
-                                        {displayPlatform(p)}
-                                      </span>
-                                      <span className="min-w-0 flex-1 font-medium text-slate-900">
+                                      <span className="min-w-0 flex-1 font-medium text-slate-900 truncate">
                                         {p.name}
                                       </span>
-                                      <a
-                                        href={p.link}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="inline-flex items-center gap-1 text-sm font-medium text-indigo-600 hover:underline"
-                                      >
-                                        Open
-                                        <ExternalLink className="h-3.5 w-3.5" />
-                                      </a>
+                                      <div className="flex shrink-0 items-center gap-2">
+                                        <span className={diffBadge(p.difficulty)}>
+                                          {p.difficulty}
+                                        </span>
+                                        <span
+                                          className={platformStyleClass(displayPlatform(p))}
+                                          title={displayPlatform(p)}
+                                        >
+                                          {displayPlatform(p)}
+                                        </span>
+                                        <a
+                                          href={p.link}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="inline-flex items-center gap-1 text-sm font-medium text-indigo-600 hover:underline"
+                                        >
+                                          Open
+                                          <ExternalLink className="h-3.5 w-3.5" />
+                                        </a>
+                                      </div>
                                     </li>
                                   ))}
                                 </ul>

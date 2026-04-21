@@ -291,6 +291,47 @@ export const getAllProblems = async(req, res) => {
 }
 
 
+export const getAssignedProblems = async (req, res) => {
+  const teacherId = req.user?.id;
+  if (!teacherId) return res.status(401).json({ msg: "Failed to authenticate teacher" });
+
+  const { batch_id: batchId, subtopic_id: subtopicId } = req.params;
+  if (!batchId || !subtopicId) {
+    return res.status(400).json({ msg: "batchId and subtopicId are required" });
+  }
+
+  try {
+    const assignments = await prisma.problemAssignment.findMany({
+      where: { batchId, subtopicId, assignedBy: teacherId },
+      include: {
+        problem: {
+          select: {
+            id: true,
+            title: true,
+            link: true,
+            difficulty: true,
+            platform: { select: { name: true } },
+          },
+        },
+      },
+    });
+
+    const problems = assignments.map((a) => ({
+      problemId: a.problem.id,
+      name: a.problem.title,
+      link: a.problem.link,
+      difficulty:
+        a.problem.difficulty.charAt(0) + a.problem.difficulty.slice(1).toLowerCase(),
+      platform: a.problem.platform?.name ?? "—",
+    }));
+
+    return res.status(200).json({ msg: "Assigned problems fetched", problems });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ msg: "Error fetching assigned problems" });
+  }
+};
+
 export const assignHomework = async (req, res) => {
   const teacherId = req.user?.id;
   if (!teacherId) {

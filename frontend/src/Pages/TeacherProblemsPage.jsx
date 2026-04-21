@@ -1,7 +1,7 @@
-import { useState , useEffect} from "react";
-import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Library, Sparkles, Plus, X } from "lucide-react";
-import axiosClient from "../utils/axiosClient"
+import axiosClient from "../utils/axiosClient";
 
 const initialForm = {
   title: "",
@@ -11,6 +11,11 @@ const initialForm = {
 };
 
 export default function TeacherProblemsPage() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { assignMode, batchId, topicId, subtopicId, returnPath } = location.state ?? {};
+  
+
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isAddPlatformOpen, setIsAddPlatformOpen] = useState(false);
   const [newProblem, setNewProblem] = useState(initialForm);
@@ -18,54 +23,78 @@ export default function TeacherProblemsPage() {
   const [platforms, setPlatforms] = useState([]);
   const [problems, setProblems] = useState([]);
   const [selectedIds, setSelectedIds] = useState(new Set());
-
-
+  const [loadingProblems, setLoadingProblems] = useState(true);
+  const [assignLoading, setAssignLoading] = useState(false);
+  const [assignError, setAssignError] = useState("");
 
   const openModal = () => setIsAddModalOpen(true);
   const closeModal = () => setIsAddModalOpen(false);
 
-
-  useEffect (()=>{
-     const fetchPlatforms =  async() => {
-    const fetchedPlatform = await axiosClient.get('/platform/all');
-    setPlatforms(fetchedPlatform.data.platforms);
-
-  }
-  fetchPlatforms()
-   
-
-
-  }, [])
   useEffect(() => {
-     const handleGetProblems = async() => {
+    const fetchPlatforms = async () => {
+      const res = await axiosClient.get("/platform/all");
+      setPlatforms(res.data.platforms);
+    };
+    fetchPlatforms();
+  }, []);
+
+  useEffect(() => {
+    const handleGetProblems = async () => {
       try {
-        const fetchedProblems = await axiosClient.get('/assignment/get-all-problems');
-        setProblems(fetchedProblems.data?.problems);
+        const res = await axiosClient.get("/assignment/get-all-problems");
+        setProblems(res.data?.problems);
       } catch (error) {
         console.log(error);
-
-        
+      } finally {
+        setLoadingProblems(false);
       }
-    }
+    };
     handleGetProblems();
-  }, [])
- 
+  }, []);
 
-  const handleAddProblem = async(e) => {
-    console.log("reached");
-    
+  const handleAddProblem = async (e) => {
     e.preventDefault();
     if (!newProblem.title?.trim() || !newProblem.link?.trim() || !newProblem.platformId) return;
-    const createdProblem = await axiosClient.post('/assignment/create-problem', newProblem);
-    console.log("problem created");
+    const createdProblem = await axiosClient.post("/assignment/create-problem", newProblem);
     setProblems((prev) => [...prev, createdProblem.data.problem]);
     setNewProblem(initialForm);
     closeModal();
   };
 
+  const handleAssign = async () => {
+    if (!assignMode || selectedIds.size === 0) return;
+    setAssignLoading(true);
+    setAssignError("");
+    try {
+      await Promise.all(
+        [...selectedIds].map((problemId) =>
+          axiosClient.post("/assignment/assign-homework", {
+            problemId,
+            batchId,
+            topicId,
+            subTopicId: subtopicId,
+          })
+        )
+      );
+      navigate(returnPath, { state: { selectedTopicId: topicId, expandedSubtopicIds: location.state?.expandedSubtopicIds ?? [] } })
+    } catch (err) {
+      setAssignError(err?.response?.data?.msg ?? "Failed to assign homework");
+      setAssignLoading(false);
+    }
+  };
+
+
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-50/80 text-slate-900">
       <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 lg:py-8">
+
+{assignError && (
+          <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {assignError}
+          </div>
+        )}
+
         <header className="mb-6 flex flex-col gap-4 border-b border-slate-200/90 pb-6 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
             <div className="flex items-center gap-2 text-amber-800">
@@ -95,17 +124,31 @@ export default function TeacherProblemsPage() {
               <Plus className="h-4 w-4" aria-hidden />
               Add problem
             </button>
-            <Link
-              to="/teacher-dashboard"
-              className="inline-flex items-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
-            >
-              Back to dashboard
-            </Link>
+            {assignMode && (
+              <button
+                disabled={selectedIds.size === 0 || assignLoading}
+                onClick={handleAssign}
+                className={`inline-flex items-center rounded-xl border ${
+                  selectedIds.size !== 0
+                    ? "border-slate-200 bg-green-400 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-green-500 disabled:opacity-60"
+                    : "border-slate-200 bg-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-600 shadow-sm transition cursor-not-allowed"
+                }`}
+              >
+                {assignLoading ? "Assigning…" : `Assign${selectedIds.size > 0 ? ` (${selectedIds.size})` : ""}`}
+              </button>
+            )}
           </div>
         </header>
 
         <div className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-sm ring-1 ring-slate-100">
-          {problems.length === 0 ? (
+          {loadingProblems ? (
+            <div className="flex items-center justify-center gap-2 py-16 text-sm text-slate-500">
+              <span className="animate-bounce [animation-delay:0ms]">·</span>
+              <span className="animate-bounce [animation-delay:150ms]">·</span>
+              <span className="animate-bounce [animation-delay:300ms]">·</span>
+              <span className="ml-1">Loading problems</span>
+            </div>
+          ) : problems.length === 0 ? (
             <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
               <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-500">
                 <Sparkles className="h-7 w-7" aria-hidden />
@@ -127,18 +170,20 @@ export default function TeacherProblemsPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-100 bg-slate-50/70 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  <th className="px-4 py-3 w-10">
-                    <input
-                      type="checkbox"
-                      className="rounded border-slate-300 accent-amber-500"
-                      checked={selectedIds.size === problems.length}
-                      onChange={(e) =>
-                        setSelectedIds(
-                          e.target.checked ? new Set(problems.map((p) => p.id)) : new Set()
-                        )
-                      }
-                    />
-                  </th>
+                  {assignMode && (
+                    <th className="px-4 py-3 w-10">
+                      <input
+                        type="checkbox"
+                        className="rounded border-slate-300 accent-amber-500"
+                        checked={selectedIds.size === problems.length}
+                        onChange={(e) =>
+                          setSelectedIds(
+                            e.target.checked ? new Set(problems.map((p) => p.id)) : new Set()
+                          )
+                        }
+                      />
+                    </th>
+                  )}
                   <th className="px-4 py-3">Title</th>
                   <th className="px-4 py-3">Platform</th>
                   <th className="px-4 py-3">Difficulty</th>
@@ -147,7 +192,7 @@ export default function TeacherProblemsPage() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {problems.map((problem) => {
-                  const platformName =
+                  const pName =
                     platforms.find((pl) => pl.id === problem.platformId)?.name ?? "—";
                   const difficultyStyles = {
                     EASY: "bg-emerald-50 text-emerald-700 ring-emerald-200",
@@ -159,22 +204,24 @@ export default function TeacherProblemsPage() {
                       key={problem.id}
                       className="transition hover:bg-slate-50/60"
                     >
-                      <td className="px-4 py-3">
-                        <input
-                          type="checkbox"
-                          className="rounded border-slate-300 accent-amber-500"
-                          checked={selectedIds.has(problem.id)}
-                          onChange={(e) => {
-                            const next = new Set(selectedIds);
-                            e.target.checked ? next.add(problem.id) : next.delete(problem.id);
-                            setSelectedIds(next);
-                          }}
-                        />
-                      </td>
+                      {assignMode && (
+                        <td className="px-4 py-3">
+                          <input
+                            type="checkbox"
+                            className="rounded border-slate-300 accent-amber-500"
+                            checked={selectedIds.has(problem.id)}
+                            onChange={(e) => {
+                              const next = new Set(selectedIds);
+                              e.target.checked ? next.add(problem.id) : next.delete(problem.id);
+                              setSelectedIds(next);
+                            }}
+                          />
+                        </td>
+                      )}
                       <td className="px-4 py-3 font-medium text-slate-900">
                         {problem.title}
                       </td>
-                      <td className="px-4 py-3 text-slate-600">{platformName}</td>
+                      <td className="px-4 py-3 text-slate-600">{pName}</td>
                       <td className="px-4 py-3">
                         <span
                           className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset ${difficultyStyles[problem.difficulty] ?? ""}`}
@@ -232,29 +279,22 @@ export default function TeacherProblemsPage() {
                 <X className="h-5 w-5" />
               </button>
             </div>
-
             <form
-              onSubmit={async(e) => {
+              onSubmit={async (e) => {
                 e.preventDefault();
                 try {
-                  const platform = await axiosClient.post('/platform/create', {
-                    name : platformName
-                  })
-                  setPlatforms([...platforms, platform.data.platform])
+                  const platform = await axiosClient.post("/platform/create", { name: platformName });
+                  setPlatforms([...platforms, platform.data.platform]);
                   setPlatformName("");
                   setIsAddPlatformOpen(false);
                 } catch (error) {
-                  handleError(error?.response?.data?.msg);
-                  
+                  console.log(error?.response?.data?.msg);
                 }
               }}
               className="mt-5 flex flex-col gap-4"
             >
               <div>
-                <label
-                  htmlFor="platform-name"
-                  className="mb-1 block text-xs font-semibold text-slate-600"
-                >
+                <label htmlFor="platform-name" className="mb-1 block text-xs font-semibold text-slate-600">
                   Platform name
                 </label>
                 <input
@@ -276,10 +316,7 @@ export default function TeacherProblemsPage() {
                 >
                   Cancel
                 </button>
-                <button
-                  type="submit"
-                  className="rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-slate-800"
-                >
+                <button type="submit" className="rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-slate-800">
                   Add
                 </button>
               </div>
@@ -302,17 +339,9 @@ export default function TeacherProblemsPage() {
             aria-labelledby="add-problem-title"
           >
             <div className="flex items-start justify-between gap-3">
-              <div>
-                <h3
-                  id="add-problem-title"
-                  className="text-lg font-bold text-slate-900"
-                >
-                  Add problem
-                </h3>
-                <p className="mt-1 text-xs text-slate-500">
-                  Submit connects to your create-problem API when wired.
-                </p>
-              </div>
+              <h3 id="add-problem-title" className="text-lg font-bold text-slate-900">
+                Add problem
+              </h3>
               <button
                 type="button"
                 onClick={closeModal}
@@ -325,35 +354,23 @@ export default function TeacherProblemsPage() {
 
             <form onSubmit={handleAddProblem} className="mt-5 flex flex-col gap-4">
               <div>
-                <label
-                  htmlFor="pb-platform"
-                  className="mb-1 block text-xs font-semibold text-slate-600"
-                >
+                <label htmlFor="pb-platform" className="mb-1 block text-xs font-semibold text-slate-600">
                   Platform
                 </label>
                 <select
                   id="pb-platform"
                   value={newProblem.platformId}
-                  label = "platformId"
-                  onChange={(e) =>
-                    setNewProblem({ ...newProblem, platformId: e.target.value })
-                  }
+                  onChange={(e) => setNewProblem({ ...newProblem, platformId: e.target.value })}
                   className="w-full rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-2.5 text-sm font-medium text-slate-900 outline-none ring-amber-200 transition focus:border-amber-400 focus:bg-white focus:ring-2"
                 >
                   <option value="">Select Platform</option>
-
-                  {platforms.map((p)=>(
-                    <option key = {p.id}value={p.id}>{p.name}</option>
-
+                  {platforms.map((p) => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
                   ))}
-        
                 </select>
               </div>
               <div>
-                <label
-                  htmlFor="pb-name"
-                  className="mb-1 block text-xs font-semibold text-slate-600"
-                >
+                <label htmlFor="pb-name" className="mb-1 block text-xs font-semibold text-slate-600">
                   Title
                 </label>
                 <input
@@ -361,18 +378,13 @@ export default function TeacherProblemsPage() {
                   type="text"
                   placeholder="e.g. Two Sum"
                   value={newProblem.title}
-                  onChange={(e) =>
-                    setNewProblem({ ...newProblem, title: e.target.value })
-                  }
+                  onChange={(e) => setNewProblem({ ...newProblem, title: e.target.value })}
                   className="w-full rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-2.5 text-sm outline-none ring-amber-200 transition focus:border-amber-400 focus:bg-white focus:ring-2"
                   required
                 />
               </div>
               <div>
-                <label
-                  htmlFor="pb-link"
-                  className="mb-1 block text-xs font-semibold text-slate-600"
-                >
+                <label htmlFor="pb-link" className="mb-1 block text-xs font-semibold text-slate-600">
                   URL
                 </label>
                 <input
@@ -380,26 +392,19 @@ export default function TeacherProblemsPage() {
                   type="text"
                   placeholder="https://…"
                   value={newProblem.link}
-                  onChange={(e) =>
-                    setNewProblem({ ...newProblem, link: e.target.value })
-                  }
+                  onChange={(e) => setNewProblem({ ...newProblem, link: e.target.value })}
                   className="w-full rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-2.5 text-sm outline-none ring-amber-200 transition focus:border-amber-400 focus:bg-white focus:ring-2"
                   required
                 />
               </div>
               <div>
-                <label
-                  htmlFor="pb-difficulty"
-                  className="mb-1 block text-xs font-semibold text-slate-600"
-                >
+                <label htmlFor="pb-difficulty" className="mb-1 block text-xs font-semibold text-slate-600">
                   Difficulty
                 </label>
                 <select
                   id="pb-difficulty"
                   value={newProblem.difficulty}
-                  onChange={(e) =>
-                    setNewProblem({ ...newProblem, difficulty: e.target.value })
-                  }
+                  onChange={(e) => setNewProblem({ ...newProblem, difficulty: e.target.value })}
                   className="w-full rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-2.5 text-sm font-medium outline-none ring-amber-200 transition focus:border-amber-400 focus:bg-white focus:ring-2"
                 >
                   <option value="EASY">Easy</option>
