@@ -35,7 +35,7 @@ export function buildSolveMatrix(outline, students) {
   if (!Array.isArray(outline) || !students?.length) return map;
 
   outline.forEach((topic, tIdx) => {
-    topic.classes.forEach((cls, cIdx) => {
+    topic.subtopics.forEach((cls, cIdx) => {
       cls.problems.forEach((p, pIdx) => {
         const key = problemStandingsKey(tIdx, cIdx, pIdx, p.name);
         const solvers = [];
@@ -61,7 +61,7 @@ export function buildSolveMatrix(outline, students) {
 
 export function getStatsForSubtopic(outline, tIndex, cIndex, matrix, students) {
   const topic = outline[tIndex];
-  const cls = topic?.classes?.[cIndex];
+  const cls = topic?.subtopics?.[cIndex];
   if (!cls?.problems?.length || !students?.length) {
     return { totalSolves: 0, maxSolves: 0 };
   }

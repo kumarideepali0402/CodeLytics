@@ -21,6 +21,7 @@ import Teachers from './Pages/BatchTeachers';
 import TeacherEnd from './Pages/TeacherEnd'
 import TeacherEndBatch  from './Pages/TeacherEndBatch'
 import TeacherEndProblemList from './Pages/TeacherEndProblemList'
+import StudentProblemSheet from './Pages/StudentProblemSheet'
 import TeacherEndContent from './Pages/TeacherEndContent'
 import TeacherEndLeaderboard from './Pages/TeacherEndLeaderbord'
 import TeacherEndAnalytics from './Pages/TeacherEndAnalytics'
@@ -106,7 +107,7 @@ function App() {
         <Route path="/teacher/problems" element={<TeacherProblemsPage />} />
 
       <Route path="/student-dashboard" element={<Navigate to="/student/assignment" replace />} />
-      <Route path='/student/assignment' element={<TeacherEndProblemList/>}></Route>
+      <Route path='/student/assignment' element={<StudentProblemSheet/>}></Route>
       <Route path='/student/profile' element={<StudentProfile/>}></Route>
       </Routes>
     </>

@@ -48,4 +48,10 @@ export const authTeacher = (req, res, next) => {
   next();
 };
 
+export const authTeacherOrCollege = (req, res, next) =>{
+  if(req.user?.role != "TEACHER" &&  req.user?.role != "COLLEGE") {
+    return res.status(403)({message : "Access denied: Teacher and college only"});
+  }
+  next();
+}
 
