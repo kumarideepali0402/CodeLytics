@@ -372,17 +372,7 @@ export default function TeacherProblemList() {
                                 <h3 className="truncate text-sm font-semibold text-slate-800 sm:text-[15px]">
                                   {subtopic.title}
                                 </h3>
-                                {subtopic.notesLink && subtopic.notesLink !== "#" && (
-                                  <a
-                                    href={classItem.notesLink}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="ml-1 inline-flex shrink-0 items-center gap-0.5 text-xs font-semibold text-indigo-600 hover:text-indigo-700 hover:underline"
-                                    onClick={(e) => e.stopPropagation()}
-                                  >
-                                    Notes <ExternalLink className="h-3 w-3" />
-                                  </a>
-                                )}
+                                
                               </div>
                               <div className="flex shrink-0 flex-wrap items-center gap-2">
                                 <button

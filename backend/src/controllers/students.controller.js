@@ -1,5 +1,5 @@
 import bcrypt from "bcrypt";
-import prisma from "../db/prisma";
+import prisma from "../db/prisma.js";
 
 export async function createStudent(req, res) {
   const collegeId = req.user?.id;
@@ -130,3 +130,61 @@ export async function getBatchStudent(req, res){
        return res.status(500).json({ msg: "Error in fetching the student" });
   }
 }
+
+export const getMyBatchOutline = async (req, res) => {
+  const studentId = req.user?.id;
+  if (!studentId) return res.status(401).json({ msg: "Unauthorized" });
+
+  try {
+    const studentBatch = await prisma.studentBatch.findFirst({
+      where: { studentId },
+    });
+    if (!studentBatch) return res.status(404).json({ msg: "You are not enrolled in any batch" });
+
+    const batchId = studentBatch.batchId;
+
+    const assignments = await prisma.problemAssignment.findMany({
+      where: { batchId },
+      include: {
+        topic: { select: { id: true, name: true } },
+        subtopic: { select: { id: true, name: true } },
+        problem: {
+          select: {
+            id: true, title: true, link: true, difficulty: true,
+            platform: { select: { name: true } },
+          },
+        },
+      },
+    });
+
+    const topicMap = new Map();
+    for (const a of assignments) {
+      if (!topicMap.has(a.topicId)) {
+        topicMap.set(a.topic.id, { id: a.topicId, title: a.topic.name, subtopics: new Map() });
+      }
+      const classMap = topicMap.get(a.topicId).subtopics;
+      if (!classMap.get(a.subtopicId)) {
+        classMap.set(a.subtopicId, { id: a.subtopicId, title: a.subtopic.name, problems: [] });
+      }
+      const d = a.problem.difficulty;
+      classMap.get(a.subtopicId).problems.push({
+        name: a.problem.title,
+        link: a.problem.link,
+        difficulty: d.charAt(0) + d.slice(1).toLowerCase(),
+        platform: a.problem.platform?.name ?? "-",
+      });
+    }
+
+    const outline = [...topicMap.values()].map((t) => ({
+      id: t.id,
+      title: t.title,
+      subtopics: [...t.subtopics.values()],
+    }));
+
+    return res.status(200).json({ msg: "Outline fetched", outline, batchId });
+  } catch (error) {
+    console.error("[getMyBatchOutline]", error);
+    return res.status(500).json({ msg: "Error fetching batch outline" });
+  }
+};
+

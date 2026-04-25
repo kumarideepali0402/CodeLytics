@@ -13,9 +13,7 @@ let isRefreshing = false;
 let failedQueue = [];
 let navigateFn = null;
 
-// export const setNavigate = (fn) => {
-//   navigateFn = fn;
-// };
+
 
 export const setNavigate = (fn) => {
   navigateFn = fn;
@@ -69,10 +67,10 @@ axiosClient.interceptors.response.use(
       finally{
         isRefreshing = false;
       }
-      
-    }
-  
 
+    }
+
+    return Promise.reject(error);
   }
 
 )

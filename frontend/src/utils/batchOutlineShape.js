@@ -2,7 +2,7 @@ export function normalizeOutlineShape(topics) {
   if(!Array.isArray(topics)) return [];
   topics.forEach((topic) =>{
       if(!Array.isArray(topic.subtopics)) {topic.subtopics = [];}
-      topic.subtopics.forEach=((sub)=>{
+      topic.subtopics.forEach((sub)=>{
         if(!Array.isArray(sub.problems)) sub.problems = [];
       });
     });

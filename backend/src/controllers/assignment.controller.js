@@ -523,8 +523,3 @@ export const getBatchOutline = async (req, res) => {
 
 }
 
-
-
-
-
-

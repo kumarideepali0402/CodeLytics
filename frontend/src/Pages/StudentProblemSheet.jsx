@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import {
   ChevronDown,
   ChevronRight,
@@ -10,6 +10,8 @@ import {
 } from "lucide-react";
 import { normalizeOutlineShape, recomputeAll } from "../utils/batchOutlineShape";
 import { displayPlatform, platformStyleClass } from "../utils/problemDisplay";
+import axiosClient from "../utils/axiosClient";
+import { handleError } from "../utils/notification";
 import {
   loadStudentProgress,
   saveStudentProgress,
@@ -17,83 +19,6 @@ import {
   setProblemState as patchProgress,
 } from "../utils/studentSheetProgress";
 
-const DUMMY_OUTLINE = [
-  {
-    title: "Arrays & Strings",
-    subtopics: [
-      {
-        title: "Sliding Window",
-        problems: [
-          { name: "Longest Substring Without Repeating Characters", link: "https://leetcode.com/problems/longest-substring-without-repeating-characters/", difficulty: "Medium", platform: "LeetCode" },
-          { name: "Maximum Sum Subarray of Size K", link: "https://leetcode.com/problems/maximum-average-subarray-i/", difficulty: "Easy", platform: "LeetCode" },
-          { name: "Minimum Window Substring", link: "https://leetcode.com/problems/minimum-window-substring/", difficulty: "Hard", platform: "LeetCode" },
-          { name: "Permutation in String", link: "https://leetcode.com/problems/permutation-in-string/", difficulty: "Medium", platform: "LeetCode" },
-          { name: "Fruit Into Baskets", link: "https://leetcode.com/problems/fruit-into-baskets/", difficulty: "Medium", platform: "LeetCode" },
-        ],
-      },
-      {
-        title: "Two Pointers",
-        problems: [
-          { name: "Two Sum II", link: "https://leetcode.com/problems/two-sum-ii-input-array-is-sorted/", difficulty: "Medium", platform: "LeetCode" },
-          { name: "Container With Most Water", link: "https://leetcode.com/problems/container-with-most-water/", difficulty: "Medium", platform: "LeetCode" },
-          { name: "Trapping Rain Water", link: "https://leetcode.com/problems/trapping-rain-water/", difficulty: "Hard", platform: "LeetCode" },
-          { name: "3Sum", link: "https://leetcode.com/problems/3sum/", difficulty: "Medium", platform: "LeetCode" },
-        ],
-      },
-      {
-        title: "Prefix Sum",
-        problems: [
-          { name: "Range Sum Query", link: "https://leetcode.com/problems/range-sum-query-immutable/", difficulty: "Easy", platform: "LeetCode" },
-          { name: "Subarray Sum Equals K", link: "https://leetcode.com/problems/subarray-sum-equals-k/", difficulty: "Medium", platform: "LeetCode" },
-          { name: "Product of Array Except Self", link: "https://leetcode.com/problems/product-of-array-except-self/", difficulty: "Medium", platform: "LeetCode" },
-        ],
-      },
-    ],
-  },
-  {
-    title: "Dynamic Programming",
-    subtopics: [
-      {
-        title: "1D DP",
-        problems: [
-          { name: "Climbing Stairs", link: "https://leetcode.com/problems/climbing-stairs/", difficulty: "Easy", platform: "LeetCode" },
-          { name: "House Robber", link: "https://leetcode.com/problems/house-robber/", difficulty: "Medium", platform: "LeetCode" },
-          { name: "Coin Change", link: "https://leetcode.com/problems/coin-change/", difficulty: "Medium", platform: "LeetCode" },
-          { name: "Word Break", link: "https://leetcode.com/problems/word-break/", difficulty: "Medium", platform: "LeetCode" },
-          { name: "Decode Ways", link: "https://leetcode.com/problems/decode-ways/", difficulty: "Medium", platform: "LeetCode" },
-        ],
-      },
-      {
-        title: "2D DP",
-        problems: [
-          { name: "Unique Paths", link: "https://leetcode.com/problems/unique-paths/", difficulty: "Medium", platform: "LeetCode" },
-          { name: "Longest Common Subsequence", link: "https://leetcode.com/problems/longest-common-subsequence/", difficulty: "Medium", platform: "LeetCode" },
-          { name: "Edit Distance", link: "https://leetcode.com/problems/edit-distance/", difficulty: "Hard", platform: "LeetCode" },
-        ],
-      },
-    ],
-  },
-  {
-    title: "Graphs",
-    subtopics: [
-      {
-        title: "BFS & DFS",
-        problems: [
-          { name: "Number of Islands", link: "https://leetcode.com/problems/number-of-islands/", difficulty: "Medium", platform: "LeetCode" },
-          { name: "Rotten Oranges", link: "https://leetcode.com/problems/rotting-oranges/", difficulty: "Medium", platform: "LeetCode" },
-          { name: "Word Ladder", link: "https://leetcode.com/problems/word-ladder/", difficulty: "Hard", platform: "LeetCode" },
-        ],
-      },
-      {
-        title: "Topological Sort",
-        problems: [
-          { name: "Course Schedule", link: "https://leetcode.com/problems/course-schedule/", difficulty: "Medium", platform: "LeetCode" },
-          { name: "Course Schedule II", link: "https://leetcode.com/problems/course-schedule-ii/", difficulty: "Medium", platform: "LeetCode" },
-        ],
-      },
-    ],
-  },
-];
 
 function difficultyBadge(difficulty) {
   const base = "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold tabular-nums";
@@ -169,12 +94,12 @@ function applyProgressToOutline(topics, progressMap) {
 }
 
 export default function StudentProblemSheet() {
-  const { batchId } = useParams();
   const navigate = useNavigate();
-  const progressStorageId = batchId || "demo";
+  const [batchId, setBatchId] = useState(null);
+  const progressStorageId = batchId ?? "student";
 
-  // TODO: replace DUMMY_OUTLINE with real API call: GET /assignment/student-batch-content/:batchId
-  const [rawOutline, setRawOutline] = useState(DUMMY_OUTLINE);
+  const [rawOutline, setRawOutline] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   const [progressMap, setProgressMap] = useState(() => loadStudentProgress(progressStorageId));
   const [openTopics, setOpenTopics] = useState({});
@@ -210,9 +135,20 @@ export default function StudentProblemSheet() {
   }, [searchQuery]);
 
   useEffect(() => {
-    if (!batchId) return;
-    // TODO: axiosClient.get(`/assignment/student-batch-content/${batchId}`).then(res => setRawOutline(res.data.outline ?? []));
-  }, [batchId]);
+    const fetchOutline = async () => {
+      setLoading(true);
+      try {
+        const res = await axiosClient.get(`/student/my-batch-outline`);
+        setRawOutline(res.data?.outline ?? []);
+        if (res.data?.batchId) setBatchId(res.data.batchId);
+      } catch (error) {
+        handleError(error.response?.data?.msg ?? "Failed to load problem list");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchOutline();
+  }, []);
 
   const data = useMemo(() => {
     if (!rawOutline.length) return [];
@@ -293,7 +229,19 @@ export default function StudentProblemSheet() {
       </div>
 
       <div className="mx-auto max-w-5xl px-4 py-3 sm:px-6">
-        {data.length > 0 && (
+        {loading && (
+          <div className="flex items-center justify-center py-20 text-slate-500 text-sm">
+            Loading problem list…
+          </div>
+        )}
+
+        {!loading && data.length === 0 && (
+          <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50/80 px-6 py-16 text-center">
+            <p className="text-sm font-medium text-slate-600">No problems assigned to this batch yet.</p>
+          </div>
+        )}
+
+        {!loading && data.length > 0 && (
           <div className="mb-5 rounded-2xl border border-slate-200/90 bg-white px-3 py-2 shadow-sm ring-1 ring-slate-100 sm:px-4">
             <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
               <div className="inline-flex w-fit shrink-0 rounded-xl bg-slate-100/90 p-0.5 ring-1 ring-slate-200/80">
@@ -378,7 +326,7 @@ export default function StudentProblemSheet() {
           </div>
         )}
 
-        {data.length > 0 && (
+        {!loading && data.length > 0 && (
           <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-xl border border-slate-200/90 bg-white px-2.5 py-2 shadow-sm ring-1 ring-slate-100 sm:gap-x-4 sm:px-3">
             <div className="flex min-w-0 items-center gap-2">
               <StudentProgressRing completed={grandDone} total={grandTotal || 0} showFractionInside={false} />
@@ -405,7 +353,7 @@ export default function StudentProblemSheet() {
           </div>
         )}
 
-        {data.length > 0 && (
+        {!loading && data.length > 0 && (
           <div className="mb-4 overflow-hidden rounded-2xl border border-slate-200/90 bg-white text-slate-900 shadow-sm ring-1 ring-slate-100">
             {data.map((topic, tIndex) => (
               <div key={tIndex} className={tIndex > 0 ? "border-t border-slate-100" : ""}>
