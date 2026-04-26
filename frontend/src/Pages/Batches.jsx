@@ -45,13 +45,13 @@ function Batches() {
     <div>
       <h2 className="text-2xl font-semibold mb-4">Manage Batches</h2>
 
-      <div className="flex space-x-2 mb-4">
+      <div className="flex flex-col sm:flex-row gap-2 mb-4">
         <input
           type="text"
           placeholder="Batch Name"
           value={batchName}
           onChange={(e) => setBatchName(e.target.value)}
-          className="border p-2 rounded w-64"
+          className="border p-2 rounded w-full sm:w-64"
         />
         <button
           onClick={createBatch}

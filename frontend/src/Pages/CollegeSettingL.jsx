@@ -2,8 +2,6 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { PlusCircle, Building2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
 import { handleError, handleSuccess } from "../utils/notification";
 import axiosClient from "../utils/axiosClient";
 
@@ -75,19 +73,18 @@ export default function CollegeSettingL() {
   ];
 
   return (
-    <div className="flex flex-col min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 mx-10 my-10 rounded-3xl px-10 py-5 shadow-md">
-      <ToastContainer />
+    <div className="flex flex-col min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 mx-3 my-3 sm:mx-10 sm:my-10 rounded-2xl sm:rounded-3xl px-4 sm:px-10 py-5 shadow-md">
       {/* Header */}
-      <div className="flex justify-around items-center w-full">
+      <div className="flex flex-col sm:flex-row sm:justify-around sm:items-center gap-4 w-full">
         <div>
-          <div className="text-4xl font-extrabold bg-gradient-to-r from-purple-600 to-violet-600 bg-clip-text text-transparent">
+          <div className="text-2xl sm:text-4xl font-extrabold bg-gradient-to-r from-purple-600 to-violet-600 bg-clip-text text-transparent">
             College <span className="text-black">Management</span>
           </div>
-          <div className="text-2xl font-medium text-gray-600">
+          <div className="text-lg sm:text-2xl font-medium text-gray-600">
             Add and Manage Colleges
           </div>
         </div>
-        <Building2 className="text-purple-500" size={120} strokeWidth={1.5} />
+        <Building2 className="hidden sm:block text-purple-500" size={120} strokeWidth={1.5} />
       </div>
 
       {/* Add College Button */}
@@ -144,7 +141,7 @@ export default function CollegeSettingL() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: -20 }}
               transition={{ duration: 0.2, ease: "easeOut" }}
-              className="bg-white p-6 rounded-xl shadow-lg w-96 border border-gray-200"
+              className="bg-white p-6 rounded-xl shadow-lg w-full max-w-sm mx-4 border border-gray-200"
               onClick={(e) => e.stopPropagation()}
             >
               <h3 className="text-xl font-semibold mb-1 text-gray-800">Add New College</h3>

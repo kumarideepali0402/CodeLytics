@@ -6,6 +6,9 @@ import {
   Star,
   ExternalLink,
   Search,
+  ShieldCheck,
+  RefreshCw,
+  AlertTriangle,
   User,
 } from "lucide-react";
 import { normalizeOutlineShape, recomputeAll } from "../utils/batchOutlineShape";
@@ -84,7 +87,7 @@ function applyProgressToOutline(topics, progressMap) {
     topic.subtopics.forEach((cls, cIdx) => {
       cls.problems.forEach((p, pIdx) => {
         const st = getProblemState(progressMap, p, tIdx, cIdx, pIdx);
-        p.solved = st.solved;
+        p.solved = st.solved || p.dbSolved === true;
         p.starred = st.starred;
       });
     });
@@ -100,6 +103,9 @@ export default function StudentProblemSheet() {
 
   const [rawOutline, setRawOutline] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [cfHandle, setCfHandle] = useState(null);
+  const [syncing, setSyncing] = useState(false);
+  const [studentName, setStudentName] = useState("");
 
   const [progressMap, setProgressMap] = useState(() => loadStudentProgress(progressStorageId));
   const [openTopics, setOpenTopics] = useState({});
@@ -134,21 +140,41 @@ export default function StudentProblemSheet() {
     return () => document.removeEventListener("mousedown", onDocMouseDown);
   }, [searchQuery]);
 
-  useEffect(() => {
-    const fetchOutline = async () => {
-      setLoading(true);
-      try {
-        const res = await axiosClient.get(`/student/my-batch-outline`);
-        setRawOutline(res.data?.outline ?? []);
-        if (res.data?.batchId) setBatchId(res.data.batchId);
-      } catch (error) {
-        handleError(error.response?.data?.msg ?? "Failed to load problem list");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchOutline();
+  const fetchOutline = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [outlineRes, handlesRes, profileRes] = await Promise.all([
+        axiosClient.get("/student/my-batch-outline"),
+        axiosClient.get("/student/platform-handles"),
+        axiosClient.get("/student/me"),
+      ]);
+      setRawOutline(outlineRes.data?.outline ?? []);
+      if (outlineRes.data?.batchId) setBatchId(outlineRes.data.batchId);
+      const cf = handlesRes.data?.handles?.find((h) =>
+        h.platformName.toLowerCase().includes("codeforces")
+      );
+      setCfHandle(cf?.handle ?? null);
+      setStudentName(profileRes.data?.profile?.name ?? "");
+    } catch (error) {
+      handleError(error.response?.data?.msg ?? "Failed to load problem list");
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => { fetchOutline(); }, [fetchOutline]);
+
+  const handleSyncCF = async () => {
+    setSyncing(true);
+    try {
+      await axiosClient.post("/student/sync/codeforces");
+      await fetchOutline();
+    } catch (error) {
+      handleError(error.response?.data?.msg ?? "Codeforces sync failed");
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   const data = useMemo(() => {
     if (!rawOutline.length) return [];
@@ -193,6 +219,12 @@ export default function StudentProblemSheet() {
   const grandTotal = data.reduce((a, t) => a + t.total, 0);
   const grandDone = data.reduce((a, t) => a + t.completed, 0);
 
+  const hasCFProblems = data.some((t) =>
+    t.subtopics?.some((s) =>
+      s.problems?.some((p) => p.platform?.toLowerCase().includes("codeforces"))
+    )
+  );
+
   let easyT = 0, easyD = 0, medT = 0, medD = 0, hardT = 0, hardD = 0;
   data.forEach((topic) => {
     topic.subtopics.forEach((cls) => {
@@ -219,16 +251,19 @@ export default function StudentProblemSheet() {
           <button
             type="button"
             onClick={() => navigate("/student/profile")}
-            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:border-violet-300 hover:text-violet-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300"
+            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-gradient-to-br from-blue-500 to-purple-600 text-sm font-bold text-white shadow-sm transition hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300"
             aria-label="Open student profile"
             title="Open profile"
           >
-            <User className="h-5 w-5" aria-hidden />
+            {studentName
+              ? studentName.split(" ").map((p) => p[0]).join("").slice(0, 2).toUpperCase()
+              : <User className="h-5 w-5" aria-hidden />}
           </button>
         </div>
       </div>
 
       <div className="mx-auto max-w-5xl px-4 py-3 sm:px-6">
+
         {loading && (
           <div className="flex items-center justify-center py-20 text-slate-500 text-sm">
             Loading problem list…
@@ -321,6 +356,18 @@ export default function StudentProblemSheet() {
                     <option value="unsolved">Unsolved</option>
                   </select>
                 </div>
+                {hasCFProblems && (
+                  <button
+                    type="button"
+                    onClick={handleSyncCF}
+                    disabled={syncing || !cfHandle}
+                    title={!cfHandle ? "Set your Codeforces handle in profile first" : "Sync Codeforces"}
+                    className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-sky-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-sky-700 disabled:opacity-50"
+                  >
+                    <RefreshCw className={`h-3.5 w-3.5 ${syncing ? "animate-spin" : ""}`} aria-hidden />
+                    {syncing ? "Syncing…" : "Sync CF"}
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -448,6 +495,7 @@ export default function StudentProblemSheet() {
                                           <th className="px-3 py-2.5 sm:w-28">Platform</th>
                                           <th className="px-3 py-2.5 sm:w-32">Difficulty</th>
                                           <th className="px-3 py-2.5 sm:w-28">Practice</th>
+                                          <th className="w-16 px-2 py-2.5 text-center">Verified</th>
                                           <th className="w-12 px-2 py-2.5 text-center sm:w-14">Revisit</th>
                                         </tr>
                                       </thead>
@@ -488,6 +536,13 @@ export default function StudentProblemSheet() {
                                                 >
                                                   Open <ExternalLink className="h-3.5 w-3.5 opacity-80" />
                                                 </a>
+                                              </td>
+                                              <td className="px-2 py-2.5 text-center align-middle sm:py-3">
+                                                {p.dbSolved === true ? (
+                                                  <ShieldCheck className="mx-auto h-4 w-4 text-emerald-500" aria-label="Verified solved" />
+                                                ) : (
+                                                  <span className="text-slate-300">—</span>
+                                                )}
                                               </td>
                                               <td className="px-2 py-2.5 text-center align-middle sm:py-3">
                                                 <button

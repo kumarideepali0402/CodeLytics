@@ -140,7 +140,7 @@ export default function TeacherProblemsPage() {
           </div>
         </header>
 
-        <div className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-sm ring-1 ring-slate-100">
+        <div className="overflow-x-auto overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-sm ring-1 ring-slate-100">
           {loadingProblems ? (
             <div className="flex items-center justify-center gap-2 py-16 text-sm text-slate-500">
               <span className="animate-bounce [animation-delay:0ms]">·</span>

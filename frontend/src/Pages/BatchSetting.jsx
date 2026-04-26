@@ -105,18 +105,18 @@ export default function BatchSetting() {
   ];
 
   return (
-    <div className="flex flex-col min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 mx-10 my-10 rounded-3xl px-10 py-5 shadow-md">
+    <div className="flex flex-col min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 mx-3 my-3 sm:mx-10 sm:my-10 rounded-2xl sm:rounded-3xl px-4 sm:px-10 py-5 shadow-md">
       {/* Header */}
-      <div className="flex justify-around items-center w-full">
+      <div className="flex flex-col sm:flex-row sm:justify-around sm:items-center gap-4 w-full">
         <div>
-          <div className="text-4xl font-extrabold bg-gradient-to-r from-blue-600 to-gray-700 bg-clip-text text-transparent">
+          <div className="text-2xl sm:text-4xl font-extrabold bg-gradient-to-r from-blue-600 to-gray-700 bg-clip-text text-transparent">
             Batch <span className="text-black">Management</span>
           </div>
-          <div className="text-2xl font-medium text-gray-600">
+          <div className="text-lg sm:text-2xl font-medium text-gray-600">
             Create and Edit Batches
           </div>
         </div>
-        <img src="../public/images/batchSetting.png" alt="" height={400} width={300} />
+        <img src="../public/images/batchSetting.png" alt="" className="hidden sm:block h-auto w-auto max-h-40 sm:max-h-48 object-contain" />
       </div>
 
       {/* Add Batch Button */}
@@ -181,7 +181,7 @@ export default function BatchSetting() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: -20 }}
               transition={{ duration: 0.2, ease: "easeOut" }}
-              className="bg-white p-6 rounded-xl shadow-lg w-96 border border-gray-200"
+              className="bg-white p-6 rounded-xl shadow-lg w-full max-w-sm mx-4 border border-gray-200"
               onClick={(e) => e.stopPropagation()}
             >
               <h3 className="text-xl font-semibold mb-4 text-gray-800">Add New Batch</h3>

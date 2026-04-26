@@ -30,8 +30,8 @@ export default function CollegeDashboard() {
       </div>
 
       {/* Content */}
-      <div className="flex flex-grow justify-center items-baseline px-20">
-        <div className="grid grid-cols-2 gap-8 max-w-4xl w-full">
+      <div className="flex flex-grow justify-center items-start px-4 sm:px-8 lg:px-20 py-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-8 max-w-4xl w-full">
           
           {/* Manage Batches Card */}
           <div

@@ -1,313 +1,263 @@
-import {
-  Mail,
-  Flame,
-  Trophy,
-  ExternalLink,
-  CheckCircle,
-  XCircle,
-  Zap,
-  Medal,
-} from "lucide-react";
-import CalendarHeatmap from "react-calendar-heatmap";
-import "react-calendar-heatmap/dist/styles.css";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import { useState, useEffect } from "react";
+import { Mail, Flame, ExternalLink, Pencil, Check, X, Users, ArrowLeft, User } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import axiosClient from "../utils/axiosClient";
+import { handleError } from "../utils/notification";
 
-// ─── Dummy data (no backend) ─────────────────────────────────────────────────
-const PROFILE = {
-  name: "John Doe",
-  username: "johndoe",
-  email: "john.doe@college.com",
-  enrollmentId: "STU2024001",
-  streak: 12,
-  rank: "Guardian",
-  batch: "SOT23B1",
+function getPlatformUrl(platformName, handle) {
+  const name = platformName.toLowerCase();
+  if (name.includes("codeforces")) return `https://codeforces.com/profile/${handle}`;
+  if (name.includes("leetcode"))   return `https://leetcode.com/${handle}`;
+  if (name.includes("geeksforgeeks") || name.includes("gfg")) return `https://www.geeksforgeeks.org/user/${handle}/`;
+  return null;
+}
+
+const PLATFORM_META = {
+  leetcode:      { favicon: "https://leetcode.com/favicon.ico",              label: "LeetCode"      },
+  codeforces:    { favicon: "https://codeforces.com/favicon.ico",            label: "Codeforces"    },
+  geeksforgeeks: { favicon: "https://www.geeksforgeeks.org/favicon.ico",     label: "GeeksforGeeks" },
+  gfg:           { favicon: "https://www.geeksforgeeks.org/favicon.ico",     label: "GeeksforGeeks" },
 };
+
+function PlatformIcon({ platformName }) {
+  const key   = Object.keys(PLATFORM_META).find((k) => platformName.toLowerCase().includes(k));
+  const meta  = key ? PLATFORM_META[key] : null;
+
+  if (meta) {
+    return (
+      <img
+        src={meta.favicon}
+        alt={meta.label}
+        title={meta.label}
+        className="h-5 w-5 rounded object-contain"
+        onError={(e) => { e.currentTarget.style.display = "none"; }}
+      />
+    );
+  }
+
+  return (
+    <span className="flex h-5 w-5 items-center justify-center rounded bg-gray-200 text-[9px] font-bold text-gray-600">
+      {platformName.toUpperCase()}
+    </span>
+  );
+}
+
+const PROFILE_DEFAULT = { name: "", email: "",  batch: "—" };
 
 const STATS = {
-  easy: { solved: 84, total: 120 },
+  easy:   { solved: 84,  total: 120 },
   medium: { solved: 156, total: 280 },
-  hard: { solved: 42, total: 95 },
-};
-const acceptanceRate = 72;
-
-const HEATMAP_VALUES = (() => {
-  const out = [];
-  for (let w = 0; w < 26; w++) {
-    for (let d = 0; d < 7; d++) {
-      const date = new Date("2024-09-01");
-      date.setDate(date.getDate() + w * 7 + d);
-      const count = Math.random() > 0.4 ? Math.floor(Math.random() * 5) + 1 : 0;
-      if (count) out.push({ date: date.toISOString().slice(0, 10), count });
-    }
-  }
-  return out;
-})();
-
-const TOPICS = [
-  { name: "Array", solved: 45, fill: "#334155" },
-  { name: "DP", solved: 38, fill: "#475569" },
-  { name: "Graph", solved: 32, fill: "#64748b" },
-  { name: "Tree", solved: 28, fill: "#94a3b8" },
-  { name: "Greedy", solved: 41, fill: "#0f766e" },
-  { name: "String", solved: 36, fill: "#0ea5a2" },
-];
-
-const BADGES = [
-  { label: "Weekly Top 1", tone: "slate", icon: "🏆" },
-  { label: "Monthly Star", tone: "zinc", icon: "⭐" },
-  { label: "7-Day Streak", tone: "stone", icon: "🔥" },
-  { label: "100 Solved", tone: "teal", icon: "💯" },
-  { label: "Guardian", tone: "slate", icon: "🛡️" },
-];
-
-const RECENT = [
-  { title: "Two Sum", status: "Accepted", time: "2 min ago" },
-  { title: "LRU Cache", status: "Accepted", time: "1 hr ago" },
-  { title: "Longest Palindromic Substring", status: "Wrong Answer", time: "3 hr ago" },
-  { title: "Merge Intervals", status: "Accepted", time: "Yesterday" },
-  { title: "Course Schedule", status: "Accepted", time: "2 days ago" },
-];
-
-const RANKINGS = [
-  { label: "Batch (Weekly)", rank: 1, total: 48 },
-  { label: "Batch (Monthly)", rank: 2, total: 48 },
-  { label: "College", rank: 12, total: 320 },
-];
-
-const HANDLES = [
-  { name: "LeetCode", handle: "johndoe", url: "https://leetcode.com/johndoe" },
-  { name: "Codeforces", handle: "john_cf", url: "https://codeforces.com/profile/john_cf" },
-  { name: "GFG", handle: "john_gfg", url: "https://auth.geeksforgeeks.org/user/john_gfg" },
-];
-
-const badgeClassByTone = {
-  slate: "bg-slate-100 text-slate-700 ring-slate-200",
-  zinc: "bg-zinc-100 text-zinc-700 ring-zinc-200",
-  stone: "bg-stone-100 text-stone-700 ring-stone-200",
-  teal: "bg-teal-100 text-teal-700 ring-teal-200",
+  hard:   { solved: 42,  total: 95  },
 };
 
-// ─── Heatmap custom styles (GitHub-like green) ────────────────────────────────
-const heatmapClassForValue = (value) => {
-  if (!value || value.count === 0) return "fill-slate-200";
-  if (value.count === 1) return "fill-teal-200";
-  if (value.count === 2) return "fill-teal-300";
-  if (value.count === 3) return "fill-teal-400";
-  return "fill-teal-500";
-};
+function DonutChart({ totalSolved, totalProblems }) {
+  const r    = 48;
+  const circ = 2 * Math.PI * r;
 
-export default function StudentProfile() {
-  const totalSolved = STATS.easy.solved + STATS.medium.solved + STATS.hard.solved;
-  const totalProblems = STATS.easy.total + STATS.medium.total + STATS.hard.total;
-  const difficultyStats = [
-    { key: "easy", label: "Easy", ...STATS.easy },
-    { key: "medium", label: "Medium", ...STATS.medium },
-    { key: "hard", label: "Hard", ...STATS.hard },
+  const easyLen   = (STATS.easy.solved   / totalProblems) * circ;
+  const medLen    = (STATS.medium.solved / totalProblems) * circ;
+  const hardLen   = (STATS.hard.solved   / totalProblems) * circ;
+
+  const segments = [
+    { len: easyLen,  color: "#22c55e", offset: 0 },
+    { len: medLen,   color: "#f59e0b", offset: easyLen },
+    { len: hardLen,  color: "#ef4444", offset: easyLen + medLen },
   ];
 
   return (
-    <div className="min-h-screen bg-slate-100/70 text-slate-800">
-      <div className="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 lg:px-8 lg:py-8">
-        <div className="grid grid-cols-1 gap-5 xl:grid-cols-12">
-          {/* Left rail */}
-          <aside className="space-y-5 xl:col-span-4">
-            <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <div className="flex items-start gap-4">
-                <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-lg font-bold text-slate-700 ring-1 ring-slate-200">
-                  {PROFILE.name
-                    .split(" ")
-                    .map((part) => part[0])
-                    .join("")
-                    .slice(0, 2)
-                    .toUpperCase()}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h1 className="truncate text-xl font-semibold text-slate-900">{PROFILE.name}</h1>
-                    <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600 ring-1 ring-slate-200">
-                      {PROFILE.rank}
-                    </span>
+    <div className="relative inline-flex items-center justify-center">
+      <svg width="140" height="140" viewBox="0 0 120 120">
+        <g transform="rotate(-90 60 60)">
+          <circle cx="60" cy="60" r={r} fill="none" stroke="#f3f4f6" strokeWidth="10" />
+          {segments.map(({ len, color, offset }, i) => (
+            <circle
+              key={i}
+              cx="60" cy="60" r={r}
+              fill="none"
+              stroke={color}
+              strokeWidth="10"
+              strokeDasharray={`${len} ${circ}`}
+              strokeDashoffset={-offset}
+              strokeLinecap="butt"
+            />
+          ))}
+        </g>
+      </svg>
+      <div className="absolute flex flex-col items-center justify-center">
+        <span className="text-2xl font-extrabold text-gray-900 leading-none">{totalSolved}</span>
+        <span className="text-xs text-gray-400 mt-0.5">/ {totalProblems}</span>
+      </div>
+    </div>
+  );
+}
+
+export default function StudentProfile() {
+  const navigate = useNavigate();
+  const [profile, setProfile]     = useState(PROFILE_DEFAULT);
+  const [handles, setHandles]     = useState([]);
+  const [editingId, setEditingId] = useState(null);
+  const [editValue, setEditValue] = useState("");
+  const [saving, setSaving]       = useState(false);
+
+  useEffect(() => {
+    axiosClient.get("/student/me")
+      .then((res) => setProfile(res.data.profile))
+      .catch(() => {});
+    axiosClient.get("/student/platform-handles")
+      .then((res) => setHandles(res.data.handles))
+      .catch(() => {});
+  }, []);
+
+  const startEdit  = (id, cur) => { setEditingId(id); setEditValue(cur ?? ""); };
+  const cancelEdit = ()         => { setEditingId(null); setEditValue(""); };
+
+  const saveHandle = async (platformId) => {
+    setSaving(true);
+    try {
+      await axiosClient.post("/student/platform-handles", { platformId, handle: editValue });
+      setHandles((prev) =>
+        prev.map((h) => h.platformId === platformId ? { ...h, handle: editValue } : h)
+      );
+      setEditingId(null);
+    } catch (e) {
+      handleError(e.response?.data?.msg ?? "Failed to save");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const totalSolved   = STATS.easy.solved + STATS.medium.solved + STATS.hard.solved;
+  const totalProblems = STATS.easy.total  + STATS.medium.total  + STATS.hard.total;
+
+  const initials = profile.name
+    .split(" ").map((p) => p[0]).join("").toUpperCase();
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+      <div className="px-6 pt-5">
+        <button
+          onClick={() => navigate("/student/assignment")}
+          className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium text-gray-500 hover:bg-white hover:text-gray-800 transition"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Assignment
+        </button>
+      </div>
+
+      <div className="flex justify-center p-8 pt-4">
+      <div className="w-full max-w-xl rounded-2xl bg-white shadow-md border border-gray-200 overflow-hidden">
+
+        {/* ── Identity ── */}
+        <div className="flex flex-col items-center gap-2 px-6 pt-5 pb-4 text-center">
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 text-xl font-bold text-white shadow-md">
+            {initials || <User className="h-8 w-8" />}
+          </div>
+          <h1 className="text-xl font-bold text-gray-900">{profile.name || "—"}</h1>
+          <div className="flex flex-wrap justify-center gap-2">
+            <span className="inline-flex items-center gap-1.5 rounded-lg bg-gray-100 px-2.5 py-1 text-xs text-gray-500">
+              <Mail className="h-3 w-3 shrink-0" />{profile.email || "—"}
+            </span>
+            <span className="inline-flex items-center gap-1.5 rounded-lg bg-gray-100 px-2.5 py-1 text-xs text-gray-500">
+              <Users className="h-3 w-3 shrink-0" />{profile.batch || "—"}
+            </span>
+            
+          </div>
+        </div>
+
+        <div className="border-t border-gray-100" />
+
+        {/* ── Coding profiles ── */}
+        <div className="px-6 py-5 text-center">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400">
+            Coding Profiles
+          </p>
+          {handles.length === 0 && (
+            <p className="text-sm text-gray-400">No platforms linked yet.</p>
+          )}
+          <div className="flex flex-wrap justify-center gap-2">
+            {handles.map((h) => (
+              <div key={h.platformId}>
+                {editingId === h.platformId ? (
+                  <div className="inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-3 py-1.5">
+                    <PlatformIcon platformName={h.platformName} />
+                    <input
+                      autoFocus
+                      value={editValue}
+                      onChange={(e) => setEditValue(e.target.value)}
+                      className="w-24 bg-transparent text-xs outline-none placeholder:text-gray-400"
+                      placeholder="Enter handle"
+                    />
+                    <button
+                      onClick={() => saveHandle(h.platformId)}
+                      disabled={saving || !editValue.trim()}
+                      className="text-green-600 hover:text-green-700 disabled:opacity-40"
+                    >
+                      <Check className="h-3.5 w-3.5" />
+                    </button>
+                    <button onClick={cancelEdit} className="text-gray-400 hover:text-gray-500">
+                      <X className="h-3.5 w-3.5" />
+                    </button>
                   </div>
-                  <p className="mt-0.5 truncate text-sm text-slate-500">@{PROFILE.username}</p>
-                  <p className="mt-1 flex items-center gap-1.5 truncate text-sm text-slate-500">
-                    <Mail className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                    {PROFILE.email}
-                  </p>
-                </div>
+                ) : (
+                  <div className="group inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-gradient-to-br from-gray-50 to-gray-100 px-3 py-1.5 hover:border-gray-300 hover:shadow-sm transition">
+                    <PlatformIcon platformName={h.platformName} />
+                    {h.handle ? (
+                      <a
+                        href={getPlatformUrl(h.platformName, h.handle)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs font-medium text-blue-600 hover:underline"
+                      >
+                        {h.handle}
+                      </a>
+                    ) : (
+                      <span className="text-xs italic text-gray-400">Not set</span>
+                    )}
+                    <button
+                      onClick={() => startEdit(h.platformId, h.handle)}
+                      className="text-gray-300 hover:text-blue-500 transition-colors"
+                    >
+                      <Pencil className="h-3 w-3" />
+                    </button>
+                  </div>
+                )}
               </div>
-              <div className="mt-4 grid grid-cols-2 gap-2">
-                <div className="rounded-xl bg-slate-50 px-3 py-2 ring-1 ring-slate-100">
-                  <p className="text-[11px] uppercase tracking-wide text-slate-500">Batch</p>
-                  <p className="mt-0.5 text-sm font-semibold text-slate-800">{PROFILE.batch}</p>
-                </div>
-                <div className="rounded-xl bg-slate-50 px-3 py-2 ring-1 ring-slate-100">
-                  <p className="text-[11px] uppercase tracking-wide text-slate-500">Enrollment</p>
-                  <p className="mt-0.5 text-sm font-semibold text-slate-800">{PROFILE.enrollmentId}</p>
-                </div>
-              </div>
-              <div className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-teal-50 px-3 py-1.5 text-sm font-medium text-teal-700 ring-1 ring-teal-100">
-                <Flame className="h-4 w-4" aria-hidden />
-                {PROFILE.streak} day streak
-              </div>
-            </section>
+            ))}
+          </div>
+        </div>
 
-            <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <h2 className="mb-3 flex items-center gap-2 text-base font-semibold text-slate-900">
-                <Trophy className="h-4.5 w-4.5 text-slate-600" aria-hidden />
-                Badges
-              </h2>
-              <div className="flex flex-wrap gap-2">
-                {BADGES.map((b, i) => (
-                  <span
-                    key={i}
-                    className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium ring-1 ${
-                      badgeClassByTone[b.tone]
-                    }`}
-                  >
-                    {b.icon} {b.label}
+        <div className="border-t border-gray-100" />
+
+        {/* ── Problems solved ── */}
+        <div className="px-6 py-5 text-center">
+          <p className="mb-4 text-xs font-semibold uppercase tracking-wider text-gray-400">
+            Problems Solved
+          </p>
+          <div className="flex items-center justify-center gap-8">
+            <DonutChart totalSolved={totalSolved} totalProblems={totalProblems} />
+
+            <div className="flex-1 space-y-3">
+              {[
+                { label: "Easy",   dot: "bg-green-500", text: "text-green-600", ...STATS.easy   },
+                { label: "Medium", dot: "bg-amber-400",  text: "text-amber-600",  ...STATS.medium },
+                { label: "Hard",   dot: "bg-red-500",   text: "text-red-600",   ...STATS.hard   },
+              ].map(({ label, dot, text, solved, total }) => (
+                <div key={label} className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className={`h-2.5 w-2.5 rounded-full ${dot}`} />
+                    <span className={`text-sm font-semibold ${text}`}>{label}</span>
+                  </div>
+                  <span className="text-sm tabular-nums text-gray-600">
+                    {solved}
+                    <span className="text-gray-400"> / {total}</span>
                   </span>
-                ))}
-              </div>
-            </section>
-
-            <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <h2 className="mb-3 text-base font-semibold text-slate-900">Rankings</h2>
-              <ul className="space-y-2">
-                {RANKINGS.map((r, i) => (
-                  <li
-                    key={i}
-                    className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2"
-                  >
-                    <span className="text-sm text-slate-700">{r.label}</span>
-                    <span className="text-sm font-semibold tabular-nums text-slate-800">
-                      #{r.rank}
-                      <span className="font-normal text-slate-400"> / {r.total}</span>
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          </aside>
-
-          {/* Main column */}
-          <main className="space-y-5 xl:col-span-8">
-            <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                <p className="text-xs uppercase tracking-wide text-slate-500">Total solved</p>
-                <p className="mt-1 text-3xl font-bold tabular-nums text-slate-900">
-                  {totalSolved}
-                  <span className="text-lg font-medium text-slate-400"> / {totalProblems}</span>
-                </p>
-              </div>
-              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                <p className="text-xs uppercase tracking-wide text-slate-500">Acceptance rate</p>
-                <p className="mt-1 text-3xl font-bold tabular-nums text-teal-700">{acceptanceRate}%</p>
-              </div>
-              {difficultyStats.map((stat) => (
-                <div
-                  key={stat.key}
-                  className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
-                >
-                  <p className="text-xs uppercase tracking-wide text-slate-500">{stat.label}</p>
-                  <p className="mt-1 text-2xl font-bold tabular-nums text-slate-900">
-                    {stat.solved}
-                    <span className="text-base font-medium text-slate-400"> / {stat.total}</span>
-                  </p>
                 </div>
               ))}
-            </section>
-
-            <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <h2 className="mb-3 flex items-center gap-2 text-base font-semibold text-slate-900">
-                <Zap className="h-4.5 w-4.5 text-slate-600" aria-hidden />
-                Activity (last 6 months)
-              </h2>
-              <div className="overflow-x-auto">
-                <CalendarHeatmap
-                  startDate={new Date("2024-09-01")}
-                  endDate={new Date("2025-03-17")}
-                  values={HEATMAP_VALUES}
-                  classForValue={heatmapClassForValue}
-                />
-              </div>
-            </section>
-
-            <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <h2 className="mb-3 text-base font-semibold text-slate-900">Solved by topic</h2>
-              <ResponsiveContainer width="100%" height={240}>
-                <BarChart data={TOPICS} layout="vertical" margin={{ left: 6, right: 10 }}>
-                  <XAxis type="number" tick={{ fontSize: 12, fill: "#64748b" }} />
-                  <YAxis
-                    type="category"
-                    dataKey="name"
-                    width={70}
-                    tick={{ fontSize: 12, fill: "#475569" }}
-                  />
-                  <Tooltip cursor={{ fill: "rgba(226,232,240,0.45)" }} />
-                  <Bar dataKey="solved" radius={[0, 4, 4, 0]}>
-                    {TOPICS.map((entry, i) => (
-                      <Cell key={i} fill={entry.fill} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </section>
-
-            <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-              <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                <h2 className="mb-3 text-base font-semibold text-slate-900">Recent submissions</h2>
-                <ul className="divide-y divide-slate-100">
-                  {RECENT.map((sub, i) => (
-                    <li key={i} className="flex items-center justify-between py-2.5 first:pt-0">
-                      <span className="truncate pr-2 text-sm font-medium text-slate-800">{sub.title}</span>
-                      <span className="flex shrink-0 items-center gap-2">
-                        <span
-                          className={
-                            sub.status === "Accepted"
-                              ? "inline-flex items-center gap-1 text-sm font-medium text-teal-700"
-                              : "inline-flex items-center gap-1 text-sm font-medium text-rose-700"
-                          }
-                        >
-                          {sub.status === "Accepted" ? (
-                            <CheckCircle className="h-4 w-4" aria-hidden />
-                          ) : (
-                            <XCircle className="h-4 w-4" aria-hidden />
-                          )}
-                          {sub.status}
-                        </span>
-                        <span className="w-20 text-right text-xs text-slate-400">{sub.time}</span>
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-
-              <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                <h2 className="mb-3 flex items-center gap-2 text-base font-semibold text-slate-900">
-                  <Medal className="h-4.5 w-4.5 text-slate-600" aria-hidden />
-                  Coding profiles
-                </h2>
-                <div className="space-y-2">
-                  {HANDLES.map((h) => (
-                    <a
-                      key={h.name}
-                      href={h.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 transition hover:border-slate-300 hover:bg-white"
-                    >
-                      <span className="font-medium">{h.name}</span>
-                      <span className="inline-flex items-center gap-1 text-slate-500">
-                        {h.handle}
-                        <ExternalLink className="h-3.5 w-3.5" aria-hidden />
-                      </span>
-                    </a>
-                  ))}
-                </div>
-              </section>
             </div>
-          </main>
+          </div>
         </div>
+
+      </div>
       </div>
     </div>
   );

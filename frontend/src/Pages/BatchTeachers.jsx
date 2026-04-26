@@ -141,7 +141,7 @@ export default function BatchTeachers() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: -20 }}
               transition={{ duration: 0.2, ease: "easeOut" }}
-              className="bg-white p-6 rounded-xl shadow-lg w-96 border border-gray-200"
+              className="bg-white p-6 rounded-xl shadow-lg w-full max-w-sm mx-4 border border-gray-200"
               onClick={(e) => e.stopPropagation()}
             >
               <h3 className="text-xl font-semibold mb-4 text-gray-800">Add Teacher</h3>

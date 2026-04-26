@@ -51,29 +51,21 @@ export default function TeacherEnd() {
   }, []);
 
   return (
-    <div className="flex flex-col min-h-screen bg-gradient-to-br from-yellow-50 to-amber-100 mx-10 my-10 rounded-3xl px-10 py-5 shadow-md">
+    <div className="flex flex-col min-h-screen bg-gradient-to-br from-yellow-50 to-amber-100 mx-3 my-3 sm:mx-10 sm:my-10 rounded-2xl sm:rounded-3xl px-4 sm:px-10 py-5 shadow-md">
       {/* Header */}
-      <div className="flex justify-around items-center w-full">
+      <div className="flex flex-col sm:flex-row sm:justify-around sm:items-center gap-4 w-full">
         <div>
-          <div className="text-4xl font-extrabold bg-gradient-to-r from-yellow-600 to-amber-700 bg-clip-text text-transparent">
+          <div className="text-2xl sm:text-4xl font-extrabold bg-gradient-to-r from-yellow-600 to-amber-700 bg-clip-text text-transparent">
             Hi! <span className="text-black">Mentor</span>
           </div>
-          <div className="text-2xl font-medium text-gray-700">
+          <div className="text-lg sm:text-2xl font-medium text-gray-700">
             Assign Problem to Batches and Track Progress
           </div>
-              {problemCount !== null && (
-            <p className="text-sm text-gray-600 mt-2">
-              Your problem bank: <strong>{problemCount}</strong> problem
-              {problemCount === 1 ? "" : "s"} — open <strong>My Problem List</strong> to create problems. In each batch, use{" "}
-              <strong>Content</strong> to add topics, subtopics, and assign problems.
-            </p>
-          )}
         </div>
         <img
           src="../public/images/teacher.png"
           alt=""
-          height={400}
-          width={300}
+          className="hidden sm:block h-auto w-auto max-h-40 sm:max-h-48 object-contain"
         />
       </div>
 

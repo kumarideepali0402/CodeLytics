@@ -152,7 +152,7 @@ function WeeklyStack({ weeks, defaultCount = 3 }) {
   const visible = showAll ? weeks : weeks.slice(0, defaultCount);
 
   return (
-    <div className="w-[780px] bg-white rounded-xl shadow-lg overflow-hidden">
+    <div className="w-full max-w-[780px] bg-white rounded-xl shadow-lg overflow-hidden">
       <div className="bg-gradient-to-r from-blue-800 to-indigo-700 text-white text-center py-3 font-bold">
         📅 Weekly Leaderboard
       </div>
@@ -264,7 +264,7 @@ function AllTimeTable({ rows }) {
   };
 
   return (
-    <div className="w-[780px] bg-white rounded-xl shadow-lg overflow-hidden">
+    <div className="w-full max-w-[780px] bg-white rounded-xl shadow-lg overflow-hidden">
       <div className="bg-gradient-to-r from-teal-700 to-cyan-600 text-white text-center py-3 font-bold">
         🏅 All-Time Champions
       </div>

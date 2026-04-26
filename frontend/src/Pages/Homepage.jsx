@@ -1,8 +1,9 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { ChevronRight, Users, BookOpen, BarChart3, Code, Shield, Zap, CheckCircle, Star, Menu, X, ArrowRight, TrendingUp, Award, Target, Activity, Eye, Trophy, Layers, GraduationCap, Building2 } from 'lucide-react';
+import { BookOpen, BarChart3, Activity, Trophy, Layers, Building2 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { FaInstagram,FaFacebook, FaWhatsapp, FaXTwitter } from "react-icons/fa6";
+import { SiLeetcode, SiGeeksforgeeks } from "react-icons/si";
 import { BarChart2,  } from "lucide-react";
 
 
@@ -13,6 +14,17 @@ import { BarChart2,  } from "lucide-react";
 export default function Homepage() {
   const videoRef = useRef(null);
   const navigate= useNavigate();
+  const platformSectionRef = useRef(null);
+  const [platformVisible, setPlatformVisible] = useState(false);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) { setPlatformVisible(true); observer.disconnect(); } },
+      { threshold: 0.2 }
+    );
+    if (platformSectionRef.current) observer.observe(platformSectionRef.current);
+    return () => observer.disconnect();
+  }, []);
 
   return(
     <div className='min-h-screen w-full flex flex-col gap-24'>
@@ -30,69 +42,66 @@ export default function Homepage() {
 
 
      
-      <section id='features-section ' className='relative  px-20 '>
-        <h1 className='relative font-extrabold text-5xl z-10  mb-9'>What We Offer ?</h1>
-        <div className='absolute inset-0 min-h-screen w-full z-0'>
-                <img src="../public/images/homepage-feature-section.png" className='w-full h-full object-cover' alt="" />
-        </div>
-        <div className='relative grid grid-cols-[7fr_5fr] z-10 ' >
-              <div className='grid grid-cols-2 gap-2'>
-                <div  className=' rounded-xl bg-red-50  p-8'>
+      <section id='features-section ' className='relative px-4 sm:px-8 lg:px-20'>
+        <h1 className='relative font-extrabold text-3xl sm:text-5xl z-10 mb-9'>What We Offer ?</h1>
+        <div className='relative grid grid-cols-1 lg:grid-cols-[7fr_5fr] z-10 items-center' >
+              <div className='grid grid-cols-1 sm:grid-cols-2 gap-2'>
+                <div  className=' rounded-xl bg-red-50  p-5'>
                   <div className='grid grid-cols-[3fr_9fr] '>
-                    <div></div>
+                    <div className='flex items-start justify-center pt-1'>
+                      <Activity className='w-8 h-8 text-purple-500' />
+                    </div>
                     <div className='text-base/5'>
-                      <div className='mb-8'>
+                      <div className='mb-3'>
                           <h4 className='text-purple-500 font-medium'>We Provide</h4>
                           <h3 className='font-bold'>Real-Time Student Progress Tracking</h3>
                           <h3 className='font-light '>Monitor every student's progress across platforms —no manual work or spreadsheets.</h3>
-
                       </div>
-                     
                     </div>
                   </div>
                 </div>
 
-                <div  className=' rounded-xl bg-orange-200  p-8'>
+                <div  className=' rounded-xl bg-orange-200  p-5'>
                   <div className='grid grid-cols-[3fr_9fr] '>
-                    <div></div>
+                    <div className='flex items-start justify-center pt-1'>
+                      <Layers className='w-8 h-8 text-blue-900' />
+                    </div>
                     <div className='text-base/5'>
-                      <div className='mb-8'>
+                      <div className='mb-3'>
                           <h4 className='text-blue-900 font-medium'>We Provide</h4>
                           <h3 className='font-bold'>Cross-Platform Assignment Integration</h3>
                           <h3 className='font-light '>Seamlessly add questions from LeetCode, GeeksforGeeks, and other popular coding platforms.</h3>
-
                       </div>
-                     
                     </div>
                   </div>
                 </div>
 
-                <div  className=' rounded-xl bg-green-100  p-8'>
+                <div  className=' rounded-xl bg-green-100  p-5'>
                   <div className='grid grid-cols-[3fr_9fr] '>
-                    <div></div>
+                    <div className='flex items-start justify-center pt-1'>
+                      <BarChart3 className='w-8 h-8 text-orange-500' />
+                    </div>
                     <div className='text-base/5'>
-                      <div className='mb-8'>
+                      <div className='mb-3'>
                           <h4 className='text-orange-500 font-medium'>We Provide</h4>
                           <h3 className='font-bold'>Performance Analytics & Dashboards</h3>
                           <h3 className='font-light '>Track every student's progress with detailed analytics and performance insights.</h3>
-
                       </div>
-                     
                     </div>
                   </div>
                 </div>
 
-                <div  className=' rounded-xl bg-blue-100  p-8'>
+                <div  className=' rounded-xl bg-blue-100  p-5'>
                   <div className='grid grid-cols-[3fr_9fr] '>
-                    <div></div>
+                    <div className='flex items-start justify-center pt-1'>
+                      <Trophy className='w-8 h-8 text-blue-500' />
+                    </div>
                     <div className='text-base/5'>
-                      <div className='mb-8'>
+                      <div className='mb-3'>
                           <h4 className='text-blue-500 font-medium'>We Provide</h4>
                           <h3 className='font-bold'>Leaderboards & Gamification</h3>
                           <h3 className='font-light '>Motivate students with weekly leaderboards and recognize top performers institution-wide.</h3>
-
                       </div>
-                     
                     </div>
                   </div>
                 </div>
@@ -102,94 +111,69 @@ export default function Homepage() {
                 
 
               </div>
-              
+
+          <div className='hidden lg:flex items-center justify-center p-4'>
+            <img src="../public/images/whatWeOffer.png" alt="What We Offer" className='h-auto w-[90%] object-contain' />
+          </div>
         </div>
 
       </section>
 
     
-      {/* Testimonials / Social Proof Section */}
-      <section className="relative min-h-[60vh] w-full px-10 py-20 bg-gradient-to-r from-purple-50 via-pink-50 to-orange-50">
-        <h1 className="text-5xl font-extrabold text-center mb-14">
-          Trusted by <span className="text-purple-600">300+</span> Institutions
-        </h1>
+      {/* Platforms Section */}
+      <style>{`
+        @keyframes slideFromLeft {
+          from { transform: translateX(-80px); opacity: 0; }
+          to   { transform: translateX(0);     opacity: 1; }
+        }
+        @keyframes slideFromRight {
+          from { transform: translateX(80px);  opacity: 0; }
+          to   { transform: translateX(0);     opacity: 1; }
+        }
+        .platform-left-1  { opacity: 0; }
+        .platform-right   { opacity: 0; }
+        .platform-left-2  { opacity: 0; }
+        .platforms-visible .platform-left-1  { animation: slideFromLeft  1.2s ease 0.2s both; }
+        .platforms-visible .platform-right   { animation: slideFromRight 1.2s ease 0.7s both; }
+        .platforms-visible .platform-left-2  { animation: slideFromLeft  1.2s ease 1.2s both; }
+      `}</style>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-7xl mx-auto">
-          {/* Card 1 */}
-          <div className="bg-white rounded-2xl shadow-md border border-dotted p-8 flex flex-col gap-4 hover:shadow-lg transition duration-300">
-            <div className="text-xl font-bold text-purple-600">ABC University</div>
-            <p className="text-gray-600 leading-relaxed">
-              “This platform has completely transformed how we track coding progress.
-              Faculty can monitor real-time performance, and students love the
-              gamification.”
-            </p>
-            <div className="flex items-center gap-3 mt-auto">
-              <img
-                src="https://randomuser.me/api/portraits/men/32.jpg"
-                className="h-12 w-12 rounded-full border"
-                alt="testimonial"
-              />
-              <div>
-                <p className="font-bold">Dr. Rajesh Verma</p>
-                <p className="text-sm text-gray-500">Dean of Engineering</p>
+      <section ref={platformSectionRef} className="w-full px-4 sm:px-8 lg:px-20 py-10 sm:py-16">
+        <div className="max-w-6xl mx-auto">
+          <div className={`grid grid-cols-1 lg:grid-cols-2 gap-10 items-center${platformVisible ? ' platforms-visible' : ''}`}>
+
+            {/* Left: Heading */}
+            <div>
+              <h2 className="text-4xl sm:text-5xl font-extrabold text-gray-900 leading-tight">
+                Platforms we<br />integrate with
+              </h2>
+            </div>
+
+            {/* Right: Stacked cards */}
+            <div className="flex flex-col gap-4 w-fit">
+              <div className="platform-left-1 flex items-center gap-4 bg-white rounded-2xl border border-gray-100 px-6 py-4 shadow-sm">
+                <SiLeetcode className="text-4xl text-[#FFA116] shrink-0" />
+                <div>
+                  <p className="font-bold text-gray-800">LeetCode</p>
+                  <p className="text-xs text-gray-400">DSA problem tracking</p>
+                </div>
+              </div>
+              <div className="platform-right flex items-center gap-4 bg-white rounded-2xl border border-gray-100 px-6 py-4 shadow-sm">
+                <SiGeeksforgeeks className="text-4xl text-[#2F8D46] shrink-0" />
+                <div>
+                  <p className="font-bold text-gray-800">GeeksforGeeks</p>
+                  <p className="text-xs text-gray-400">CS fundamentals & practice</p>
+                </div>
+              </div>
+              <div className="platform-left-2 flex items-center gap-4 bg-white rounded-2xl border border-gray-100 px-6 py-4 shadow-sm">
+                <img src="https://codeforces.com/favicon-32x32.png" alt="Codeforces" className="w-9 h-9 shrink-0" />
+                <div>
+                  <p className="font-bold text-gray-800">Codeforces</p>
+                  <p className="text-xs text-gray-400">Competitive programming</p>
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Card 2 */}
-          <div className="bg-white rounded-2xl shadow-md border border-dotted p-8 flex flex-col gap-4 hover:shadow-lg transition duration-300">
-            <div className="text-xl font-bold text-orange-600">XYZ Institute of Tech</div>
-            <p className="text-gray-600 leading-relaxed">
-              “Assignments from LeetCode and GFG integrate seamlessly. No more manual
-              work for teachers, and the dashboards give us all the insights we need.”
-            </p>
-            <div className="flex items-center gap-3 mt-auto">
-              <img
-                src="https://randomuser.me/api/portraits/women/44.jpg"
-                className="h-12 w-12 rounded-full border"
-                alt="testimonial"
-              />
-              <div>
-                <p className="font-bold">Prof. Neha Sharma</p>
-                <p className="text-sm text-gray-500">Head of CSE Dept.</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Card 3 */}
-          <div className="bg-white rounded-2xl shadow-md border border-dotted p-8 flex flex-col gap-4 hover:shadow-lg transition duration-300">
-            <div className="text-xl font-bold text-green-600">LMN College</div>
-            <p className="text-gray-600 leading-relaxed">
-              “Our students are more engaged than ever. Leaderboards & analytics keep
-              them motivated, while we ensure progress tracking without extra effort.”
-            </p>
-            <div className="flex items-center gap-3 mt-auto">
-              <img
-                src="https://randomuser.me/api/portraits/men/52.jpg"
-                className="h-12 w-12 rounded-full border"
-                alt="testimonial"
-              />
-              <div>
-                <p className="font-bold">Mr. Arjun Patel</p>
-                <p className="text-sm text-gray-500">Training & Placement Head</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Stats footer */}
-        <div className="mt-20 flex flex-col md:flex-row justify-around items-center gap-8 text-center">
-          <div>
-            <h2 className="text-4xl font-extrabold text-purple-600">300+</h2>
-            <p className="text-gray-600">Institutions Onboarded</p>
-          </div>
-          <div>
-            <h2 className="text-4xl font-extrabold text-orange-600">25,000+</h2>
-            <p className="text-gray-600">Active Students</p>
-          </div>
-          <div>
-            <h2 className="text-4xl font-extrabold text-green-600">1M+</h2>
-            <p className="text-gray-600">Problems Solved</p>
           </div>
         </div>
       </section>
@@ -203,7 +187,7 @@ export default function Homepage() {
             <img 
               src="./logo.png" 
               alt="Codelytics Logo" 
-              className="h-30 w-50"
+              className="h-12 w-auto"
             />
           </div>
 

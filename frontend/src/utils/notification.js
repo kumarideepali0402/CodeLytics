@@ -1,17 +1,9 @@
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 
 export const handleSuccess = (msg) => {
-  console.log("Toaster");
-  
-  toast.success(msg, {
-    position: "top-right",
-    autoClose: 3000,
-  });
+  toast.success(msg);
 };
 
 export const handleError = (msg) => {
-  toast.error(msg, {
-    position: "top-right",
-    autoClose: 3000,
-  });
+  toast.error(msg);
 };

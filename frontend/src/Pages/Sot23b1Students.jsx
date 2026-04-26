@@ -1,9 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Trash2 } from "lucide-react";
-import { ToastContainer } from "react-toastify";
 import axiosClient from "../utils/axiosClient";
-import "react-toastify/dist/ReactToastify.css";
 import {useParams} from "react-router-dom"
 import {handleSuccess, handleError} from "../utils/notification"
 
@@ -138,7 +136,7 @@ export default function Students() {
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.9, y: -20 }}
                 transition={{ duration: 0.2, ease: "easeOut" }}
-                className="bg-white p-6 rounded-xl shadow-lg w-96"
+                className="bg-white p-6 rounded-xl shadow-lg w-full max-w-sm mx-4"
                 onClick={(e) => e.stopPropagation()}
               >
                 <h3 className="text-lg font-semibold mb-4">Add New Student</h3>

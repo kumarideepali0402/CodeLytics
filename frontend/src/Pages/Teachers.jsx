@@ -47,20 +47,20 @@ function Teachers() {
     <div>
       <h2 className="text-2xl font-semibold mb-4">Manage Teachers</h2>
 
-      <div className="flex space-x-2 mb-4">
+      <div className="flex flex-col sm:flex-row gap-2 mb-4">
         <input
           type="text"
           placeholder="Teacher Name"
           value={teacherName}
           onChange={(e) => setTeacherName(e.target.value)}
-          className="border p-2 rounded w-48"
+          className="border p-2 rounded w-full sm:w-48"
         />
         <input
           type="email"
           placeholder="Teacher Email"
           value={teacherEmail}
           onChange={(e) => setTeacherEmail(e.target.value)}
-          className="border p-2 rounded w-64"
+          className="border p-2 rounded w-full sm:w-64"
         />
         <button
           onClick={addTeacher}

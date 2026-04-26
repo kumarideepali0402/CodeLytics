@@ -90,6 +90,7 @@ model User {
   studentEnrollmentId  String? @unique @map("student_enrollment_id")
   teacherEnrollmentId  String? @unique @map("teacher_enrollment_id")
   studentStreak        Int     @default(0) @map("student_streak")
+  syncToken            String? @unique @map("sync_token")
 
   // Relations
   college              College             @relation(fields: [collegeId], references: [id])
@@ -115,6 +116,8 @@ model StudentPlatformAccount {
   userId     String   @map("user_id")
   platformId String   @map("platform_id")
   handle     String   // student's id/username on the platform
+  solvedProblemCache Json @default("[]") @map("solved_problem_cache")
+  lastSyncedAt DateTime? @map("last_synced_at") 
 
   // Relations
   user      User      @relation(fields: [userId], references: [id])

@@ -1,6 +1,41 @@
 import bcrypt from "bcrypt";
 import prisma from "../db/prisma.js";
 
+export const getMyProfile = async (req, res) => {
+  const studentId = req.user?.id;
+  if (!studentId) return res.status(401).json({ msg: "Unauthorized" });
+
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: studentId },
+      select: {
+        name: true,
+        email: true,
+        studentEnrollmentId: true,
+        studentStreak: true,
+        studentBatch: {
+          select: { batch: { select: { name: true } } },
+          take: 1,
+        },
+      },
+    });
+
+    if (!user) return res.status(404).json({ msg: "Student not found" });
+
+    return res.status(200).json({
+      profile: {
+        name: user.name,
+        email: user.email,
+        enrollmentId: user.studentEnrollmentId ?? "—",
+        streak: user.studentStreak,
+        batch: user.studentBatch[0]?.batch?.name ?? "—",
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({ msg: "Error fetching profile" });
+  }
+};
+
 export async function createStudent(req, res) {
   const collegeId = req.user?.id;
   if (!collegeId) {
@@ -154,6 +189,10 @@ export const getMyBatchOutline = async (req, res) => {
             platform: { select: { name: true } },
           },
         },
+        problemStatuses: {
+          where: { studentId },
+          select: { status: true}
+        }
       },
     });
 
@@ -172,6 +211,9 @@ export const getMyBatchOutline = async (req, res) => {
         link: a.problem.link,
         difficulty: d.charAt(0) + d.slice(1).toLowerCase(),
         platform: a.problem.platform?.name ?? "-",
+        assignmentId: true,
+        dbSolved : a.problemStatuses[0]?.status === "COMPLETED"
+
       });
     }
 

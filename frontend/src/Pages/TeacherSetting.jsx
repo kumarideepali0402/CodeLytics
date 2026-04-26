@@ -88,17 +88,17 @@ export default function TeacherSetting() {
   ];
 
   return (
-    <div className="flex flex-col min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 mx-10 my-10 rounded-3xl px-10 py-5 shadow-md">
-      <div className="flex justify-around items-center w-full">
+    <div className="flex flex-col min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 mx-3 my-3 sm:mx-10 sm:my-10 rounded-2xl sm:rounded-3xl px-4 sm:px-10 py-5 shadow-md">
+      <div className="flex flex-col sm:flex-row sm:justify-around sm:items-center gap-4 w-full">
         <div>
-          <div className="text-4xl font-extrabold bg-gradient-to-r from-green-600 to-emerald-500 bg-clip-text text-transparent">
+          <div className="text-2xl sm:text-4xl font-extrabold bg-gradient-to-r from-green-600 to-emerald-500 bg-clip-text text-transparent">
             Teacher <span className="text-black">Management</span>
           </div>
-          <div className="text-2xl font-medium text-gray-600">
+          <div className="text-lg sm:text-2xl font-medium text-gray-600">
             Add and manage teachers for the entire college
           </div>
         </div>
-        <img src="../public/images/teacherSetting.png" alt="" height={150} width={200} />
+        <img src="../public/images/teacherSetting.png" alt="" className="hidden sm:block h-auto w-auto max-h-40 object-contain" />
       </div>
 
       <div className="flex justify-end mt-10">
@@ -161,7 +161,7 @@ export default function TeacherSetting() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: -20 }}
               transition={{ duration: 0.2, ease: "easeOut" }}
-              className="bg-white p-6 rounded-xl shadow-lg w-96 border border-gray-200"
+              className="bg-white p-6 rounded-xl shadow-lg w-full max-w-sm mx-4 border border-gray-200"
               onClick={(e) => e.stopPropagation()}
             >
               <h3 className="text-xl font-semibold mb-4 text-gray-800">Add New Teacher</h3>
