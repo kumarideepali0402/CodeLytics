@@ -113,7 +113,7 @@ export default function Homepage() {
               </div>
 
           <div className='hidden lg:flex items-center justify-center p-4'>
-            <img src="/images/whatWeOffer.png" alt="What We Offer" className='h-auto w-[90%] object-contain' />
+            <img src="/Images/whatWeOffer.png" alt="What We Offer" className='h-auto w-[90%] object-contain' />
           </div>
         </div>
 
