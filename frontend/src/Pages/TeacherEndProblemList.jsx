@@ -15,8 +15,8 @@ import {
   getStatsForSubtopic,
   problemStandingsKey,
 } from "../utils/teacherBatchStandings";
-import ClassStandingsModal from "../components/ClassStandingsModal";
-import ProblemStandingsModal from "../components/ProblemStandingsModal"
+import ClassStandingsModal from "../Components/ClassStandingsModal";
+import ProblemStandingsModal from "../Components/ProblemStandingsModal"
 import axiosClient from "../utils/axiosClient";
 import { handleError } from "../utils/notification";
 
