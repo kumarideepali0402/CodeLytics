@@ -7,7 +7,17 @@
         if(m2) return `${m2[1]}/${m2[2].toUpperCase()}`
 
 
-        return null;
+    }
+    if(platform.includes("leetcode")) {
+        const m1 = url.match(/\/problems\/([A-Za-z0-9-]+)/i);
+        if(m1){ return `${m1[1].toLowerCase()}`};
     }
 
+
+    if(platform.includes("gfg") || platform.includes("geeksforgeeks")) {
+        const m1 = url.match(/\/problems\/([A-Za-z0-9-]+)/i);
+        if(m1){ return m1[1].toLowerCase()};
+    }
+    
+        return null;
  }

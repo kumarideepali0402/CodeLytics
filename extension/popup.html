@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+   
+</head>
+<body>
+    <div id ="setup">
+        <h1>Codelytics Setup</h1>
+        <input id="backendUrl" placeholder="https://your-backend.com"/>
+        <input id="syncToken" placeholder="Paste your sync token"/>
+        <button id="save-btn">Save</button>
+    </div>
+    <div id="main" style = "display:none;">
+        <h1>Codelytics Sync</h1>
+        <button id="LCSync"> Sync Leetcode</button>
+        <button id="GFGSync"> Sync GFG</button>
+        <div id="status"></div>
+        <a href="#" id = "reset">Reset Settings</a>
+    </div>
+     <script src="popup.js"></script>
+</body>
+</html>

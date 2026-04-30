@@ -1,0 +1,25 @@
+{
+    "manifest_version" : 3,
+    "name" : "Codelytics Sync",
+    "version" : "1.0",
+    "description" : "Sync your Leetcode and GFG submissions to Codelytics",
+    "permissions" : ["storage", "cookies"],
+    
+    "host_permissions":[
+        "https://leetcode.com/*",
+        "https://www.geeksforgeeks.org/*",
+        "https://practiceapi.geeksforgeeks.org/*",
+        "https://auth.geeksforgeeks.org/*",
+        "http://localhost:*/*",
+        "https://*/*"
+    ],
+    "background" : {
+        "service_worker" : "background.js"
+    },
+
+    "action" : {
+        "default_popup" : "popup.html",
+        "default_title" : "Codelytics Sync"
+    }
+
+}

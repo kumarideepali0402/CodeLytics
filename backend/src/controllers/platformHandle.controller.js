@@ -1,6 +1,7 @@
 import prisma from "../db/prisma.js";
 import crypto from "crypto"
 import { cfCheck } from "../utils/checkers/cfChecker.js";
+import cacheCheck from'../utils/checkers/cacheChecker.js'
 
 
 export const getHandles = async(req, res) => {
@@ -184,4 +185,79 @@ export const syncCF = async(req, res) => {
         
     }
 };
+
+
+
+export const extSync = async(req, res) =>{
+    const authHeader = req.headers.authorization;
+    if(!authHeader || !authHeader.startsWith("Bearer ")){
+        return res.status(401).json({
+            msg : "Missing sync token"
+        });
+    }
+
+    const syncToken = authHeader.slice(7);
+
+    try {
+        const user = await prisma.user.findFirst({
+            where: {syncToken: syncToken},
+            select:{
+                id: true
+            }
+        })
+        if (!user) return res.status(401).json({ msg: "Invalid sync token" });
+        const studentId = user.id;
+
+        const {platform, solvedIds} = req.body;
+        const studentHandle = await prisma.studentPlatformAccount.findFirst({
+            where: {
+                userId: studentId,
+                platform: { name: {contains: platform, mode: "insensitive"}}}
+
+        })
+
+        if (!studentHandle) return res.status(400).json({ msg: `${platform} handle not set` });
+
+        await prisma.studentPlatformAccount.update({
+            where: { id: studentHandle.id },
+            data: {solvedProblemCache: solvedIds, lastSyncedAt: new Date()}
+        })
+        const studentBatchId = await prisma.studentBatch.findFirst({
+            where: {studentId},
+            select:{ batchId: true}     
+        })
+        if (!studentBatchId) return res.status(200).json({ msg: "No batch assigned", results: [] });
+
+
+
+        const assignments = await prisma.problemAssignment.findMany({
+            where: { batchId:studentBatchId.batchId },
+            include:{
+                problem: {select: {id: true, title: true,link: true}}
+            }
+        })
+
+        const results = cacheCheck(new Set(solvedIds), assignments,platform );
+        await Promise.all(
+            results.map((r) => 
+                 prisma.problemStatus.upsert({
+                    where: { problemAssignmentId_studentId: {problemAssignmentId: r.assignmentId, studentId: studentId} },
+                    update: {...(r.solved ? { status: "COMPLETED"} : {}), syncedAt: new Date()},
+                    create: {problemAssignmentId: r.assignmentId , studentId, status: r.solved? "COMPLETED" : "PENDING", syncedAt: new Date()}
+                })
+            )
+        )
+        return res.status(200).json({ msg: `${platform} sync complete`, results });
+
+        
+    } catch (error) {
+        console.log(error);
+       return res.status(500).json({ msg: "Internal Server Error" });
+
+        
+        
+    }
+
+
+}
 
