@@ -3,7 +3,7 @@
     "name" : "Codelytics Sync",
     "version" : "1.0",
     "description" : "Sync your Leetcode and GFG submissions to Codelytics",
-    "permissions" : ["storage", "cookies"],
+    "permissions" : ["storage", "cookies", "scripting", "tabs"],
     
     "host_permissions":[
         "https://leetcode.com/*",

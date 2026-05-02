@@ -209,11 +209,14 @@ export const extSync = async(req, res) =>{
         const studentId = user.id;
 
         const {platform, solvedIds} = req.body;
-        const studentHandle = await prisma.studentPlatformAccount.findFirst({
-            where: {
-                userId: studentId,
-                platform: { name: {contains: platform, mode: "insensitive"}}}
 
+        const isGFG = platform.toLowerCase().includes("gfg") || platform.toLowerCase().includes("geeksforgeeks");
+        const platformFilter = isGFG
+            ? { OR: [{ name: { contains: "gfg", mode: "insensitive" } }, { name: { contains: "geeksforgeeks", mode: "insensitive" } }] }
+            : { name: { contains: platform, mode: "insensitive" } };
+
+        const studentHandle = await prisma.studentPlatformAccount.findFirst({
+            where: { userId: studentId, platform: platformFilter }
         })
 
         if (!studentHandle) return res.status(400).json({ msg: `${platform} handle not set` });
@@ -224,22 +227,28 @@ export const extSync = async(req, res) =>{
         })
         const studentBatchId = await prisma.studentBatch.findFirst({
             where: {studentId},
-            select:{ batchId: true}     
+            select:{ batchId: true}
         })
         if (!studentBatchId) return res.status(200).json({ msg: "No batch assigned", results: [] });
 
-
-
         const assignments = await prisma.problemAssignment.findMany({
-            where: { batchId:studentBatchId.batchId },
+            where: {
+                batchId: studentBatchId.batchId,
+                problem: { platform: platformFilter }
+            },
             include:{
                 problem: {select: {id: true, title: true,link: true}}
             }
         })
 
-        const results = cacheCheck(new Set(solvedIds), assignments,platform );
+        console.log(`[extSync] platform=${platform} solvedIds=${solvedIds.length} assignments=${assignments.length}`);
+
+        const results = cacheCheck(new Set(solvedIds), assignments, platform);
+
+        console.log(`[extSync] solved matches:`, results.filter(r => r.solved).map(r => r.problemTitle));
+
         await Promise.all(
-            results.map((r) => 
+            results.map((r) =>
                  prisma.problemStatus.upsert({
                     where: { problemAssignmentId_studentId: {problemAssignmentId: r.assignmentId, studentId: studentId} },
                     update: {...(r.solved ? { status: "COMPLETED"} : {}), syncedAt: new Date()},

@@ -16,7 +16,7 @@
 
     if(platform.includes("gfg") || platform.includes("geeksforgeeks")) {
         const m1 = url.match(/\/problems\/([A-Za-z0-9-]+)/i);
-        if(m1){ return m1[1].toLowerCase()};
+        if(m1){ return m1[1].toLowerCase().replace(/-{1,2}\d+$/, '')};
     }
     
         return null;

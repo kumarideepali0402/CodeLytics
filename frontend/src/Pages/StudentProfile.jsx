@@ -98,6 +98,8 @@ export default function StudentProfile() {
   const [editingId, setEditingId] = useState(null);
   const [editValue, setEditValue] = useState("");
   const [saving, setSaving]       = useState(false);
+  const [syncToken, setSyncToken] = useState("");
+  const [copied, setCopied]       = useState(false);
 
   useEffect(() => {
     axiosClient.get("/student/me")
@@ -107,6 +109,24 @@ export default function StudentProfile() {
       .then((res) => setHandles(res.data.handles))
       .catch(() => {});
   }, []);
+
+  const generateToken = async() => {
+    try {
+      const res = await axiosClient.post('/student/generate-sync-token');
+      setSyncToken(res.data.syncToken);
+      
+    } catch (error) {
+      handleError(error.response?.data?.msg);
+      
+    }
+  }
+
+  const copyToken = () => {
+    navigator.clipboard.writeText(syncToken);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000)
+
+  }
 
   const startEdit  = (id, cur) => { setEditingId(id); setEditValue(cur ?? ""); };
   const cancelEdit = ()         => { setEditingId(null); setEditValue(""); };
@@ -224,6 +244,32 @@ export default function StudentProfile() {
               </div>
             ))}
           </div>
+        </div>
+
+        <div className="border-t border-gray-100" />
+
+        {/* ── Extension Sync Token ── */}
+        <div className="px-6 py-5 text-center">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400">
+            Extension Sync Token
+          </p>
+          {syncToken ? (
+            <div className="flex items-center justify-center gap-2">
+              <code className="rounded bg-gray-100 px-3 py-1.5 text-xs text-gray-700 font-mono truncate max-w-[200px]">
+                {syncToken}
+              </code>
+              <button onClick={copyToken} className="text-xs text-blue-600 hover:underline">
+                {copied ? "Copied!" : "Copy"}
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={generateToken}
+              className="rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white hover:bg-blue-700 transition"
+            >
+              Generate Sync Token
+            </button>
+          )}
         </div>
 
         <div className="border-t border-gray-100" />
