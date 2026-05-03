@@ -74,71 +74,92 @@ const syncLeetCode= async() => {
    
 }
 
-const syncGFG = async() => {
-    const {backendUrl, syncToken, gfgHandle} = await chrome.storage.local.get(["backendUrl", "syncToken", "gfgHandle"]);
-    if (!gfgHandle) throw new Error("GFG username not set — reset extension settings and add your GFG handle");
 
-    const tabs = await chrome.tabs.query({ url: "*://*.geeksforgeeks.org/*" });
-    if (tabs.length === 0) throw new Error("Please open a GeeksForGeeks tab first");
 
-    const handle = gfgHandle;
-    const [{ result: data }] = await chrome.scripting.executeScript({
-        target: { tabId: tabs[0].id },
-        func: async (userHandle) => {
-            const csrfToken = document.cookie.split('; ')
-                .find(c => c.startsWith('csrftoken='))?.split('=')[1] ?? '';
-            const res = await fetch("https://practiceapi.geeksforgeeks.org/api/v1/user/problems/submissions/", {
-                method: "POST",
-                credentials: "include",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Accept": "application/json",
-                    "X-CSRFToken": csrfToken,
-                    "Referer": "https://www.geeksforgeeks.org",
-                    "Origin": "https://www.geeksforgeeks.org"
-                },
-                body: JSON.stringify({
-                    handle: userHandle,
-                    requestType: "",
-                    year: "",
-                    month: ""
-                })
-            });
-            return { status: res.status, json: await res.json() };
-        },
-        args: [handle]
-    });
 
-    console.log("[GFG debug]", JSON.stringify(data));
+// const syncGFG = async() => {
+//     const {backendUrl, syncToken, gfgHandle} = await chrome.storage.local.get(["backendUrl", "syncToken", "gfgHandle"]);
+//     if (!gfgHandle) throw new Error("GFG username not set — reset extension settings and add your GFG handle");
 
-    const json = data.json;
-    if (!json.result || json.status !== "success") throw new Error(json.message ?? "GFG API error");
-    const result = json.result;
+//     const tabs = await chrome.tabs.query({ url: "*://*.geeksforgeeks.org/*" });
+//     if (tabs.length === 0) throw new Error("Please open a GeeksForGeeks tab first");
 
-    const solvedIds = []
+//     const handle = gfgHandle;
+//     const [{ result: data }] = await chrome.scripting.executeScript({
+//         target: { tabId: tabs[0].id },
+//         func: async (userHandle) => {
+//             const csrfToken = document.cookie.split('; ')
+//                 .find(c => c.startsWith('csrftoken='))?.split('=')[1] ?? '';
+//             const res = await fetch("https://practiceapi.geeksforgeeks.org/api/v1/user/problems/submissions/", {
+//                 method: "POST",
+//                 credentials: "include",
+//                 headers: {
+//                     "Content-Type": "application/json",
+//                     "Accept": "application/json",
+//                     "X-CSRFToken": csrfToken,
+//                     "Referer": "https://www.geeksforgeeks.org",
+//                     "Origin": "https://www.geeksforgeeks.org"
+//                 },
+//                 body: JSON.stringify({
+//                     handle: userHandle,
+//                     requestType: "",
+//                     year: "",
+//                     month: ""
+//                 })
+//             });
+//             return { status: res.status, json: await res.json() };
+//         },
+//         args: [handle]
+//     });
+
+//     console.log("[GFG debug]", JSON.stringify(data));
+
+//     const json = data.json;
+//     if (!json.result || json.status !== "success") throw new Error(json.message ?? "GFG API error");
+//     const result = json.result;
+
+//     const solvedIds = []
    
-    const solvedIdsObj = Object.values(result);
-    for(const difficulty of solvedIdsObj) {
-        for(const problem of Object.values(difficulty)) {
-            solvedIds.push(problem.slug.replace(/-{1,2}\d+$/, ''))
+//     const solvedIdsObj = Object.values(result);
+//     for(const difficulty of solvedIdsObj) {
+//         for(const problem of Object.values(difficulty)) {
+//             solvedIds.push(problem.slug.replace(/-{1,2}\d+$/, ''))
 
+//         }
+//     }
+
+//     const backendRes = await fetch(`${backendUrl}/api/student/ext-sync`,{
+//         method: "POST",
+//         headers:{
+//             "Content-type" : "application/json",
+//             "Authorization": `Bearer ${syncToken}`
+//         },
+//         body: JSON.stringify({platform:"geeksforgeeks", solvedIds})
+//     })
+
+//     if (!backendRes.ok) {
+//         const err = await backendRes.json();
+//         throw new Error(err.msg ?? "Backend sync failed");
+//     }
+
+//     return { count: solvedIds.length }
+
+// }
+
+const syncGFG = async() => {
+    const {backendUrl, syncToken, gfgHandle} =await chrome.storage.local.get(["backendUrl", "syncToken", "gfgHandle"]);
+    if(!gfgHandle) {
+        throw new Error("GFG handle is required")
+    }
+
+    const tab = await chrome.tabs.query({url: "*://*/geeksforgeeks.org/*"})
+    if(tabs.length === 0)  throw new Error ("open one gfg tab");
+    const handle = gfgHandle;
+    const [{result: data}] = await chrome.scripting.executescript({
+        target = {tabId = tabs[0].id},
+        func: async(userhandle) => {
+            
         }
-    }
-
-    const backendRes = await fetch(`${backendUrl}/api/student/ext-sync`,{
-        method: "POST",
-        headers:{
-            "Content-type" : "application/json",
-            "Authorization": `Bearer ${syncToken}`
-        },
-        body: JSON.stringify({platform:"geeksforgeeks", solvedIds})
     })
-
-    if (!backendRes.ok) {
-        const err = await backendRes.json();
-        throw new Error(err.msg ?? "Backend sync failed");
-    }
-
-    return { count: solvedIds.length }
 
 }
