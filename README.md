@@ -241,17 +241,121 @@ Protected routes require a valid access token cookie. The extension sync endpoin
 
 ---
 
-## Database Schema (Key Models)
+## Database Schema
 
+```mermaid
+erDiagram
+  College ||--o{ Batch : "has"
+  College ||--o{ User : "has"
+  College ||--o{ Ranking : "has"
+  User ||--o{ TeacherBatch : "teaches"
+  User ||--o{ StudentBatch : "enrolled in"
+  User ||--o{ Problem : "adds"
+  User ||--o{ ProblemAssignment : "assigns"
+  User ||--o{ ProblemStatus : "has"
+  User ||--o{ Ranking : "has"
+  User ||--o{ StudentPlatformAccount : "has"
+  Batch ||--o{ TeacherBatch : "has"
+  Batch ||--o{ StudentBatch : "has"
+  Batch ||--o{ ProblemAssignment : "has"
+  Batch ||--o{ Ranking : "has"
+  Platform ||--o{ Problem : "hosts"
+  Platform ||--o{ StudentPlatformAccount : "has"
+  Problem ||--o{ ProblemAssignment : "assigned via"
+  Topic ||--o{ Subtopic : "has"
+  Topic ||--o{ ProblemAssignment : "categorizes"
+  Subtopic ||--o{ ProblemAssignment : "categorizes"
+  ProblemAssignment ||--o{ ProblemStatus : "tracked by"
+
+  College {
+    string id PK
+    string name
+    string email
+    string passwordHash
+  }
+  Batch {
+    string id PK
+    string name
+    string collegeId FK
+  }
+  User {
+    string id PK
+    string name
+    string email
+    Role role
+    string collegeId FK
+    int studentStreak
+  }
+  Platform {
+    string id PK
+    string name
+  }
+  Problem {
+    string id PK
+    string title
+    string link
+    Difficulty difficulty
+    string platformId FK
+    string addedBy FK
+  }
+  Topic {
+    string id PK
+    string name
+    string createdBy FK
+  }
+  Subtopic {
+    string id PK
+    string name
+    string topicId FK
+    string createdBy FK
+  }
+  ProblemAssignment {
+    string id PK
+    string problemId FK
+    string batchId FK
+    string assignedBy FK
+    string topicId FK
+    string subtopicId FK
+    datetime assignedDate
+  }
+  ProblemStatus {
+    string id PK
+    string problemAssignmentId FK
+    string studentId FK
+    ProblemStatusType status
+    datetime syncedAt
+  }
+  Ranking {
+    string id PK
+    string studentId FK
+    string batchId FK
+    string collegeId FK
+    RankingType rankingType
+    RankingScope rankingScope
+    int rank
+    int score
+    int problemsSolved
+  }
+  TeacherBatch {
+    string id PK
+    string teacherId FK
+    string batchId FK
+  }
+  StudentBatch {
+    string id PK
+    string studentId FK
+    string batchId FK
+  }
+  StudentPlatformAccount {
+    string id PK
+    string userId FK
+    string platformId FK
+    string handle
+    datetime lastSyncedAt
+  }
 ```
-College ──< Batch ──< StudentBatch ──> User (STUDENT)
-                 └──< TeacherBatch ──> User (TEACHER)
-                 └──< ProblemAssignment ──< ProblemStatus ──> User
-                                       └──> Problem ──> Platform
 
-User ──< StudentPlatformAccount ──> Platform
-```
-
+**Key models:**
 - **Batch** — a cohort/class within a college
 - **ProblemAssignment** — a problem assigned to a batch under a topic/subtopic
 - **ProblemStatus** — a student's solve status for an assigned problem
