@@ -160,13 +160,13 @@ export const syncCF = async(req, res) => {
 
                 },
                 update: {
-                    status: r.solved? "COMPLETED" :"PENDING",
+                    status: r.solved? "SOLVED" :"UNSOLVED",
                     syncedAt: new Date(),
                 },
                 create: {
                     problemAssignmentId: r.assignmentId,
                     studentId,
-                    status: r.solved ? "COMPLETED" : "PENDING",
+                    status: r.solved ? "SOLVED" :"UNSOLVED",
                     syncedAt : new Date()
                 }
             })
@@ -251,8 +251,8 @@ export const extSync = async(req, res) =>{
             results.map((r) =>
                  prisma.problemStatus.upsert({
                     where: { problemAssignmentId_studentId: {problemAssignmentId: r.assignmentId, studentId: studentId} },
-                    update: {...(r.solved ? { status: "COMPLETED"} : {}), syncedAt: new Date()},
-                    create: {problemAssignmentId: r.assignmentId , studentId, status: r.solved? "COMPLETED" : "PENDING", syncedAt: new Date()}
+                    update: {...(r.solved ? { status: "SOLVED"} : {}), syncedAt: new Date()},
+                    create: {problemAssignmentId: r.assignmentId , studentId, status: r.solved? "SOLVED" : "UNSOLVED", syncedAt: new Date()}
                 })
             )
         )

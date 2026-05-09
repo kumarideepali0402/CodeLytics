@@ -212,7 +212,7 @@ export const getMyBatchOutline = async (req, res) => {
         difficulty: d.charAt(0) + d.slice(1).toLowerCase(),
         platform: a.problem.platform?.name ?? "-",
         assignmentId: true,
-        dbSolved : a.problemStatuses[0]?.status === "COMPLETED"
+        dbSolved : a.problemStatuses[0]?.status === "SOLVED"
 
       });
     }

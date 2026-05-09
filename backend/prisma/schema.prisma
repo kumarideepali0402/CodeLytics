@@ -28,10 +28,8 @@ enum Role {
 }
 
 enum ProblemStatusType {
-  PENDING
-  IN_PROGRESS
-  COMPLETED
-  SKIPPED
+  SOLVED
+  UNSOLVED
 }
 
 enum Difficulty {
@@ -233,10 +231,10 @@ model ProblemAssignment {
 }
 
 model ProblemStatus {
-  id                     String             @id @default(cuid()) @map("id")
+  id                      String             @id @default(cuid()) @map("id")
   problemAssignmentId     String            @map("problem_assignment_id")
   studentId               String            @map("student_id")
-  status                  ProblemStatusType @default(PENDING)
+  status                  ProblemStatusType @default(UNSOLVED)
   syncedAt                DateTime          @default(now()) @map("synced_at")
 
   // Relations
