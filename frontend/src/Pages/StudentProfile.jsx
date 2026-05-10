@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { Mail, Flame, ExternalLink, Pencil, Check, X, Users, ArrowLeft, User } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Mail, Flame, ExternalLink, Pencil, Check, X, Users, ArrowLeft, User, CheckCircle2 } from "lucide-react";
+import { useNavigate, useParams } from "react-router-dom";
 import axiosClient from "../utils/axiosClient";
 import { handleError } from "../utils/notification";
 
@@ -93,6 +93,11 @@ function DonutChart({ totalSolved, totalProblems }) {
 
 export default function StudentProfile() {
   const navigate = useNavigate();
+  const { id, batchId: collegeBatchId, studentId } = useParams();
+  const batchId    = id ?? collegeBatchId;
+  const backPath   = id ? `/teacher/${batchId}/students` : `/batch/${batchId}/students`;
+  const teacherMode = Boolean(studentId);
+
   const [profile, setProfile]     = useState(PROFILE_DEFAULT);
   const [handles, setHandles]     = useState([]);
   const [editingId, setEditingId] = useState(null);
@@ -102,13 +107,30 @@ export default function StudentProfile() {
   const [copied, setCopied]       = useState(false);
 
   useEffect(() => {
-    axiosClient.get("/student/me")
-      .then((res) => setProfile(res.data.profile))
-      .catch(() => {});
-    axiosClient.get("/student/platform-handles")
-      .then((res) => setHandles(res.data.handles))
-      .catch(() => {});
-  }, []);
+    if (teacherMode) {
+      axiosClient.get(`/analytics/student/${studentId}/profile`)
+        .then((res) => {
+          const s = res.data.student;
+          setProfile({ name: s.name, email: s.email, batch: s.studentEnrollmentId || "—" });
+          setHandles(
+            (s.platformAccounts ?? []).map((acc) => ({
+              platformId:    acc.id,
+              platformName:  acc.platform?.name ?? "",
+              handle:        acc.handle ?? "",
+              lastSyncedAt:  acc.lastSyncedAt ?? null,
+            }))
+          );
+        })
+        .catch(() => {});
+    } else {
+      axiosClient.get("/student/me")
+        .then((res) => setProfile(res.data.profile))
+        .catch(() => {});
+      axiosClient.get("/student/platform-handles")
+        .then((res) => setHandles(res.data.handles))
+        .catch(() => {});
+    }
+  }, [teacherMode, studentId]);
 
   const generateToken = async() => {
     try {
@@ -152,6 +174,95 @@ export default function StudentProfile() {
   const initials = profile.name
     .split(" ").map((p) => p[0]).join("").toUpperCase();
 
+  /* ── Teacher view ── */
+  if (teacherMode) {
+    const ini  = profile.name.split(" ").map((p) => p[0]).join("").slice(0, 2).toUpperCase();
+    const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "Never";
+    return (
+      <div className="space-y-4 max-w-xl mx-auto">
+        {/* Back */}
+        <button
+          onClick={() => navigate(backPath)}
+          className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4" /> Back to students
+        </button>
+
+        {/* Identity card */}
+        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+          <div className="bg-slate-50 border-b border-slate-100 px-6 py-5 flex items-center gap-4">
+            <div className="w-14 h-14 rounded-2xl bg-orange-100 text-orange-600 flex items-center justify-center text-xl font-bold shrink-0">
+              {ini || <User className="h-7 w-7" />}
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-slate-900">{profile.name || "—"}</h2>
+              <div className="flex flex-wrap gap-2 mt-1">
+                <span className="inline-flex items-center gap-1 text-xs text-slate-500 bg-white border border-slate-200 rounded-lg px-2 py-0.5">
+                  <Mail className="h-3 w-3" /> {profile.email || "—"}
+                </span>
+                {profile.batch && profile.batch !== "—" && (
+                  <span className="text-xs text-slate-600 bg-white border border-slate-200 rounded-lg px-2 py-0.5 font-medium">
+                    {profile.batch}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Platform handles */}
+        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+          <div className="px-5 py-3 border-b border-slate-100 bg-slate-50">
+            <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500">Platform Handles</h3>
+          </div>
+          <div className="divide-y divide-slate-100">
+            {handles.length === 0 ? (
+              <p className="px-5 py-4 text-sm text-slate-400">No platform handles added.</p>
+            ) : handles.map((h) => {
+              const metaKey = Object.keys(PLATFORM_META).find((k) => h.platformName.toLowerCase().includes(k));
+              const meta    = metaKey ? PLATFORM_META[metaKey] : null;
+              const url     = getPlatformUrl(h.platformName, h.handle);
+              return (
+                <div key={h.platformId} className="flex items-center gap-3 px-5 py-3">
+                  {meta ? (
+                    <img src={meta.favicon} alt={meta.label} className="h-5 w-5 rounded object-contain" />
+                  ) : (
+                    <div className="h-5 w-5 rounded bg-slate-100 flex items-center justify-center text-[9px] font-bold text-slate-500">
+                      {(h.platformName || "?")[0].toUpperCase()}
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-slate-700">{meta?.label ?? h.platformName}</p>
+                    <p className="text-xs text-slate-400 truncate">
+                      {h.handle || <span className="italic">Not set</span>}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-[11px] text-slate-400">
+                      Synced {fmtDate(h.lastSyncedAt)}
+                    </span>
+                    {h.handle && url && (
+                      <a
+                        href={url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+                      >
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      </a>
+                    )}
+                    {h.handle && <CheckCircle2 className="h-4 w-4 text-emerald-500" />}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  /* ── Student view (unchanged) ── */
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       <div className="px-6 pt-5">

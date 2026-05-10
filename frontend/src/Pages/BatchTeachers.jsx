@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Trash2, UserPlus } from "lucide-react";
+import { Trash2, UserPlus, User } from "lucide-react";
 import { handleSuccess } from "../utils/notification";
 import axiosClient from "../utils/axiosClient";
 
@@ -16,7 +16,9 @@ const DUMMY_COLLEGE_TEACHERS = [
 
 export default function BatchTeachers() {
   const { batchId } = useParams();
+  const navigate = useNavigate();
   const [batchTeachers, setBatchTeachers] = useState([]);
+  const [loading, setLoading]             = useState(true);
   const [isAddTeacherModalOpen, setIsAddTeacherModalOpen] = useState(false);
   const [selectedTeacherId, setSelectedTeacherId] = useState("");
   const [dropdownTeacher, setDropdownTeacher] = useState([]);
@@ -49,6 +51,8 @@ export default function BatchTeachers() {
         if (Array.isArray(teachers)) setBatchTeachers(teachers);
       } catch (error) {
         console.error("Fetch batch teachers:", error.response?.data?.msg ?? error.message);
+      } finally {
+        setLoading(false);
       }
     };
     fetchBatchTeachers();
@@ -106,11 +110,16 @@ export default function BatchTeachers() {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-48 text-slate-400 text-sm">
+        Loading teachers…
+      </div>
+    );
+  }
+
   return (
     <div className="w-full space-y-4">
-      <p className="rounded-lg border border-amber-200/80 bg-amber-50/90 px-3 py-2 text-xs text-amber-950 ring-1 ring-amber-100">
-        Teacher list uses the API when available; add/remove may update local state if the request fails.
-      </p>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
           Teachers in this batch
@@ -196,13 +205,14 @@ export default function BatchTeachers() {
               <th className="px-6 py-3 text-left text-sm font-semibold">Name</th>
               <th className="px-6 py-3 text-left text-sm font-semibold">Email</th>
               <th className="px-6 py-3 text-left text-sm font-semibold">Enrollment ID</th>
+              <th className="px-6 py-3 text-center text-sm font-semibold">Profile</th>
               <th className="px-6 py-3 text-center text-sm font-semibold">Remove from batch</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200">
             {batchTeachers.length === 0 ? (
               <tr>
-                <td colSpan={4} className="px-6 py-8 text-center text-slate-500">
+                <td colSpan={5} className="px-6 py-8 text-center text-slate-500">
                   No teachers in this batch. Click &quot;Add Teacher&quot; to assign one.
                 </td>
               </tr>
@@ -212,6 +222,14 @@ export default function BatchTeachers() {
                   <td className="px-6 py-4 text-sm font-medium text-gray-700">{teacher.name}</td>
                   <td className="px-6 py-4 text-sm text-gray-600">{teacher.email}</td>
                   <td className="px-6 py-4 text-sm text-gray-600">{teacher.teacherEnrollmentId || "—"}</td>
+                  <td className="px-6 py-4 text-sm text-center">
+                    <button
+                      onClick={() => navigate(`/batch/${batchId}/teachers/${teacher.id}`)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 bg-white hover:bg-slate-50 transition text-xs font-medium"
+                    >
+                      <User className="w-3.5 h-3.5" /> View Profile
+                    </button>
+                  </td>
                   <td className="px-6 py-4 text-sm text-center">
                     <button
                       onClick={() => handleRemoveFromBatch(teacher.teacherBatchId)}

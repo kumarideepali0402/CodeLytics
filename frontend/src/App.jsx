@@ -32,6 +32,7 @@ import Table from './Pages/Table'
 import Visual from './Pages/Visual'
 import StudentProfile from './Pages/StudentProfile';
 import TeacherDetails from './Pages/TeacherDetails';
+import TeacherBatchStudents from './Pages/TeacherBatchStudents';
 
 
 
@@ -81,7 +82,9 @@ function App() {
           <Route index element={<Dashboard/>}/>
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="students" element={<Students />} />
+          <Route path="students/:studentId" element={<StudentProfile />} />
           <Route path="teachers" element={<Teachers />} />
+          <Route path="teachers/:id" element={<TeacherDetails />} />
           <Route path="problemslist" element={<TeacherEndProblemList />} />
         </Route>
 
@@ -91,6 +94,8 @@ function App() {
           <Route index element={<TeacherEndContent/>}/>
           <Route path='problemslist' element={<TeacherEndProblemList/>}/>
           <Route path='content' element={<TeacherEndContent/>}/>
+          <Route path='students' element={<TeacherBatchStudents/>}/>
+          <Route path='students/:studentId' element={<StudentProfile/>}/>
           <Route path='leaderboard' element={<TeacherEndLeaderboard/>}/>
           <Route path='analytics' element={<TeacherEndAnalytics/>}>
               <Route index element={<Visual/>}></Route>

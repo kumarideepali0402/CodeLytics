@@ -191,13 +191,13 @@ export default function TeacherEndContent() {
       const res = await axiosClient.post("/assignment/create-topic", { name: t });
       const created = res.data?.topic; // { id, name, createdBy }
       const newTopic = {
-        id: created.id,
+        serverTopicId: created.id,
         title: created.name,
-        subtopics: [],         
+        subtopics: [],
       };
 
       setData((prev) => [...prev, newTopic]);
-      setSelectedTopicId(created.id); // point directly at the new topic
+      setSelectedTopicId(created.id);
       setNewTopicTitle("");
       setNewTopicMode(false);
     } catch (err) {

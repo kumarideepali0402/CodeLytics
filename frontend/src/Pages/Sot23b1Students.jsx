@@ -1,29 +1,34 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Trash2 } from "lucide-react";
+import { Trash2, User } from "lucide-react";
 import axiosClient from "../utils/axiosClient";
-import {useParams} from "react-router-dom"
+import { useParams, useNavigate } from "react-router-dom"
 import {handleSuccess, handleError} from "../utils/notification"
 
 
 
 export default function Students() {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [newStudent, setNewStudent] = useState({  name: "", email: "" , password:""});
+  const [newStudent, setNewStudent] = useState({ name: "", email: "", password: "", studentEnrollmentId: "" });
   const [students, setStudents] = useState([]);
-  const [batchName, setBatchName] = useState("")
+  const [batchName, setBatchName] = useState("");
+  const [loading, setLoading]    = useState(true);
 
 
-  const {batchId} = useParams();
+  const { batchId } = useParams();
+  const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchBatchStudent= async() =>{
-      const res = await axiosClient.get(`/student/get/${batchId}`);
-      setStudents(res.data?.students.map((s) => s.student) ?? []);
-      
-      setBatchName(res.data?.batchName);
-
-    }
+    const fetchBatchStudent = async () => {
+      try {
+        const res = await axiosClient.get(`/student/get/${batchId}`);
+        setStudents(res.data?.students.map((s) => s.student) ?? []);
+        setBatchName(res.data?.batchName);
+      } catch (_) {
+      } finally {
+        setLoading(false);
+      }
+    };
     fetchBatchStudent();
 
   },[batchId])
@@ -33,15 +38,16 @@ export default function Students() {
       e.preventDefault();
       const res = await axiosClient.post(`/student/create`, {
         batchId,
-        name:newStudent.name,
-        email:newStudent.email,
+        name: newStudent.name,
+        email: newStudent.email,
         password: newStudent.password,
+        studentEnrollmentId: newStudent.studentEnrollmentId || undefined,
        });
        const student = res.data.student;
        
        handleSuccess(res.data?.msg);
        setStudents([...students, student]);
-       setNewStudent({ id: "", name: "", email: "" , password:""});
+       setNewStudent({ name: "", email: "", password: "", studentEnrollmentId: "" });
        setIsModalOpen(false);
     } catch (error) {
       handleError(res.data?.msg)
@@ -52,6 +58,14 @@ export default function Students() {
 
   const handleRemoveStudent = (id) => {
     setStudents(students.filter((student) => student.id != id ))
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-48 text-slate-400 text-sm">
+        Loading students…
+      </div>
+    );
   }
 
   return (
@@ -101,8 +115,11 @@ export default function Students() {
 
                 {/* View button */}
                 <td className="px-6 py-4 text-sm text-center">
-                  <button className="px-3 py-1.5 rounded-lg border border-blue-500 text-blue-500 bg-white hover:bg-blue-500 hover:text-white transition">
-                    View
+                  <button
+                    onClick={() => navigate(`/batch/${batchId}/students/${student.id}`)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 bg-white hover:bg-slate-50 transition text-xs font-medium"
+                  >
+                    <User className="w-3.5 h-3.5" /> View Profile
                   </button>
                 </td>
 
@@ -153,6 +170,15 @@ export default function Students() {
                     }
                     className="w-full px-3 py-2 mb-2 rounded-lg border"
                     required
+                  />
+                  <input
+                    type="text"
+                    placeholder="Roll / Enrollment ID"
+                    value={newStudent.studentEnrollmentId}
+                    onChange={(e) =>
+                      setNewStudent({ ...newStudent, studentEnrollmentId: e.target.value })
+                    }
+                    className="w-full px-3 py-2 mb-2 rounded-lg border"
                   />
 
                   <input
