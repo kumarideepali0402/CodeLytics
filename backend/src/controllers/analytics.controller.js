@@ -86,9 +86,84 @@ export const getStandings = async(req, res) => {
     
     } catch (error) {
         console.error("[getStandings]", error)
-        return res.status(500).json({ msg: "Error fetching standings" })
-
-        
+        return res.status(500).json({ msg: "Error fetching standings" });
     }
+};
 
-} 
+export const getBatchStudents = async (req, res) => {
+    const batchId = req.params.batchId;
+    if (!batchId) return res.status(400).json({ msg: "batchId required" });
+
+    try {
+        const studentBatches = await prisma.studentBatch.findMany({
+            where: { batchId },
+            include: {
+                student: {
+                    select: {
+                        id: true, name: true, email: true,
+                        studentEnrollmentId: true, studentStreak: true,
+                    }
+                }
+            },
+            orderBy: { student: { name: "asc" } }
+        });
+
+        const studentIds = studentBatches.map(sb => sb.studentId);
+        const assignments = await prisma.problemAssignment.findMany({
+            where: { batchId }, select: { id: true }
+        });
+        const assignmentIds = assignments.map(a => a.id);
+
+        const solvedCounts = await prisma.problemStatus.groupBy({
+            by: ["studentId"],
+            where: { studentId: { in: studentIds }, problemAssignmentId: { in: assignmentIds }, status: "SOLVED" },
+            _count: { id: true }
+        });
+
+        const solvedMap = {};
+        solvedCounts.forEach(sc => { solvedMap[sc.studentId] = sc._count.id; });
+
+        const students = studentBatches.map(sb => ({
+            ...sb.student,
+            solvedCount: solvedMap[sb.studentId] ?? 0,
+            totalAssigned: assignmentIds.length
+        }));
+
+        return res.status(200).json({ students });
+    } catch (error) {
+        console.error("[getBatchStudents]", error);
+        return res.status(500).json({ msg: "Error fetching students" });
+    }
+};
+
+export const getStudentProfile = async (req, res) => {
+    const { studentId } = req.params;
+    if (!studentId) return res.status(400).json({ msg: "studentId required" });
+
+    try {
+        const student = await prisma.user.findUnique({
+            where: { id: studentId },
+            select: {
+                id: true, name: true, email: true,
+                studentEnrollmentId: true, studentStreak: true,
+                platformAccounts: {
+                    select: {
+                        id: true, handle: true, lastSyncedAt: true,
+                        platform: { select: { id: true, name: true } }
+                    }
+                }
+            }
+        });
+
+        if (!student) return res.status(404).json({ msg: "Student not found" });
+
+        const solvedCount = await prisma.problemStatus.count({
+            where: { studentId, status: "SOLVED" }
+        });
+
+        return res.status(200).json({ student: { ...student, solvedCount } });
+    } catch (error) {
+        console.error("[getStudentProfile]", error);
+        return res.status(500).json({ msg: "Error fetching student profile" });
+    }
+};

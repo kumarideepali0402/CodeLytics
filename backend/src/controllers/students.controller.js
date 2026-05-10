@@ -42,10 +42,11 @@ export async function createStudent(req, res) {
     return res.status(400).json({ msg: "College authentication failed!" });
   }
 
-  const { name, email, password, batchId } = req.body;
+  const { name, email, password, batchId, studentEnrollmentId } = req.body;
 
   const trimmedName = typeof name === "string" ? name.trim() : "";
   const trimmedEmail = typeof email === "string" ? email.trim().toLowerCase() : "";
+  const trimmedEnrollmentId = typeof studentEnrollmentId === "string" ? studentEnrollmentId.trim() : null;
 
   if (!trimmedName || !trimmedEmail || !password || !collegeId || !batchId) {
     return res.status(400).json({ msg: "name, email, password, batchId is required!" });
@@ -80,7 +81,8 @@ export async function createStudent(req, res) {
           passwordHash: hashedPassword,
           collegeId,
           email: trimmedEmail,
-          role: "STUDENT"
+          role: "STUDENT",
+          ...(trimmedEnrollmentId && { studentEnrollmentId: trimmedEnrollmentId }),
         },
 
         select: {

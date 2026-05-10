@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from "react";
 import { Outlet, useLocation, useNavigate, useParams } from "react-router-dom";
-import { LayoutGrid, Trophy, BarChart3, ListChecks } from "lucide-react";
+import { LayoutGrid, Trophy, BarChart3, ListChecks, Users } from "lucide-react";
 import axiosClient from "../utils/axiosClient";
 
 const navItems = [
@@ -10,6 +10,13 @@ const navItems = [
     path: "content",
     icon: LayoutGrid,
     description: "Topics & assignments",
+  },
+  {
+    key: "students",
+    label: "Students",
+    path: "students",
+    icon: Users,
+    description: "Batch students & profiles",
   },
   {
     key: "problemslist",
@@ -36,8 +43,9 @@ const navItems = [
 
 function sectionFromPath(pathname) {
   if (pathname.includes("/problemslist")) return "problemslist";
-  if (pathname.includes("/leaderboard")) return "leaderboard";
-  if (pathname.includes("/analytics")) return "analytics";
+  if (pathname.includes("/leaderboard"))  return "leaderboard";
+  if (pathname.includes("/analytics"))    return "analytics";
+  if (pathname.includes("/students"))     return "students";
   return "content";
 }
 
@@ -78,10 +86,10 @@ export default function TeacherEndBatch() {
   const batchTitle = batchName ?? batchId ?? "";
 
   return (
-    <div className="z-10 flex min-h-0 flex-col md:flex-row md:gap-0">
+    <div className="flex flex-col md:flex-row md:h-screen md:overflow-hidden">
       {/* Side rail: vertical on md+, horizontal scroll on small screens */}
       <nav
-        className="shrink-0 border-b border-gray-200 bg-white md:w-56 md:border-b-0 md:border-r md:py-4"
+        className="shrink-0 border-b border-gray-200 bg-white md:w-56 md:border-b-0 md:border-r md:py-4 md:overflow-y-auto"
         aria-label="Batch sections"
       >
         <p
@@ -124,7 +132,7 @@ export default function TeacherEndBatch() {
         </ul>
       </nav>
 
-      <div className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto p-2 md:p-4">
+      <div className="flex-1 min-w-0 overflow-y-auto p-2 md:p-4">
         <Outlet />
       </div>
     </div>

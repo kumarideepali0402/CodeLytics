@@ -1,318 +1,276 @@
-
-
-
 import React, { useEffect, useState, useMemo } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { Search } from "lucide-react";
+import axiosClient from "../utils/axiosClient";
 
-const DifficultyTag = ({ level }) => {
-  const colors = {
-    Easy: "bg-green-100 text-green-700",
-    Medium: "bg-yellow-100 text-yellow-700",
-    Hard: "bg-red-100 text-red-700",
-  };
-  return (
-    <span
-      className={`px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${colors[level]}`}
-    >
-      {level}
-    </span>
-  );
+const diffBadge = (d) => {
+  const base = "text-[11px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap";
+  if (d === "EASY")   return `${base} bg-emerald-100 text-emerald-700`;
+  if (d === "MEDIUM") return `${base} bg-amber-100 text-amber-700`;
+  return `${base} bg-rose-100 text-rose-700`;
 };
 
-const StatusCell = ({ status }) => {
-  return (
-    <div
-      className={`px-2 py-1 rounded text-xs font-medium text-center ${
-        status === "Solved"
-          ? "bg-green-100 text-green-700"
-          : "bg-red-100 text-red-700"
-      }`}
-    >
-      {status}
-    </div>
-  );
-};
+// Cycles through accent colors per topic
+const TOPIC_ACCENTS = [
+  "border-l-4 border-sky-400",
+  "border-l-4 border-violet-400",
+  "border-l-4 border-amber-400",
+  "border-l-4 border-rose-400",
+  "border-l-4 border-teal-400",
+  "border-l-4 border-orange-400",
+];
 
 export default function BatchTable() {
-  const [data, setData] = useState([]);
+  const [problems, setProblems] = useState([]);
   const [students, setStudents] = useState([]);
-  const [totals, setTotals] = useState({});
+  const [statuses, setStatuses] = useState({});
+  const [totals,   setTotals]   = useState({});
+  const [loading,  setLoading]  = useState(true);
 
-  // === Filters & Sorting States ===
-  const [rollFilter, setRollFilter] = useState("");
-  const [textFilter, setTextFilter] = useState("");
+  const [rollFilter,       setRollFilter]       = useState("");
+  const [textFilter,       setTextFilter]       = useState("");
   const [difficultyFilter, setDifficultyFilter] = useState("All");
-  const [sortByTotal, setSortByTotal] = useState(false);
-  const [sortByCount, setSortByCount] = useState(null); // "asc" | "desc" | null
+
+  const { id: batchId } = useParams();
+  const navigate = useNavigate();
 
   useEffect(() => {
-    const response = {
-      problems: [
-        {
-          className: "Class 1 : Intro to DS/Algo",
-          problemName: "Number of factors",
-          countProb: 99,
-          link: "#",
-          category: "Easy",
-          platform: "GeeksForGeeks",
-          solvedBy: {
-            "2401010001": "Solved",
-            "2401010002": "Not Solved",
-            "2401010003": "Solved",
-            "2401010004": "Solved",
-            "2401010005": "Not Solved",
-          },
-        },
-        {
-          className: "Class 2 : Loops",
-          problemName: "Sum of digits",
-          countProb: 50,
-          link: "#",
-          category: "Easy",
-          platform: "Codeforces",
-          solvedBy: {
-            "2401010001": "Not Solved",
-            "2401010002": "Solved",
-            "2401010003": "Solved",
-            "2401010004": "Solved",
-            "2401010005": "Not Solved",
-          },
-        },
-        {
-          className: "Class 3 : Arrays",
-          problemName: "Second Largest Element in Array",
-          countProb: 87,
-          link: "#",
-          category: "Medium",
-          platform: "LeetCode",
-          solvedBy: {
-            "2401010001": "Solved",
-            "2401010002": "Solved",
-            "2401010003": "Not Solved",
-            "2401010004": "Not Solved",
-            "2401010005": "Solved",
-          },
-        },
-        {
-          className: "Class 6 : Dynamic Programming",
-          problemName: "Knapsack Problem",
-          countProb: 150,
-          link: "#",
-          category: "Hard",
-          platform: "GeeksForGeeks",
-          solvedBy: {
-            "2401010001": "Solved",
-            "2401010002": "Solved",
-            "2401010003": "Not Solved",
-            "2401010004": "Solved",
-            "2401010005": "Not Solved",
-          },
-        },
-      ],
-    };
+    async function fetchData() {
+      try {
+        const res = await axiosClient.get(`/analytics/batch/${batchId}/standings`);
+        setProblems(res.data.problems);
+        setStatuses(res.data.statuses);
+        setStudents(res.data.students);
+        const totalObj = {};
+        res.data.students.forEach((s) => {
+          totalObj[s.id] = res.data.problems.filter(
+            (p) => res.data.statuses[`${p.assignmentId}_${s.id}`] === "SOLVED"
+          ).length;
+        });
+        setTotals(totalObj);
+      } catch {
+        // silent
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchData();
+  }, [batchId]);
 
-    setData(response.problems);
-    setStudents(Object.keys(response.problems[0].solvedBy));
+  const filteredStudents = students.filter((s) =>
+    !rollFilter.trim() ||
+    s.studentEnrollmentId?.toLowerCase().includes(rollFilter.toLowerCase())
+  );
 
-    // Calculate totals
-    const totalsObj = {};
-    Object.keys(response.problems[0].solvedBy).forEach((id) => {
-      totalsObj[id] = response.problems.reduce(
-        (sum, p) => sum + (p.solvedBy[id] === "Solved" ? 1 : 0),
-        0
-      );
+  const filteredProblems = problems.filter((p) => {
+    const matchesText = p.title?.toLowerCase().includes(textFilter.toLowerCase());
+    const matchesDiff =
+      difficultyFilter === "All" || p.difficulty === difficultyFilter.toUpperCase();
+    return matchesText && matchesDiff;
+  });
+
+  // Build flat row list with rowspan metadata
+  const rows = useMemo(() => {
+    // topic → subtopic → problems[]
+    const grouped = new Map();
+    filteredProblems.forEach((p) => {
+      if (!grouped.has(p.topic)) grouped.set(p.topic, new Map());
+      const sub = grouped.get(p.topic);
+      if (!sub.has(p.subtopic)) sub.set(p.subtopic, []);
+      sub.get(p.subtopic).push(p);
     });
-    setTotals(totalsObj);
-  }, []);
 
-  // === Apply Filters & Sorting ===
-  const filteredStudents = useMemo(() => {
-    let arr = students.map((id) => ({
-      id,
-      total: totals[id] || 0,
-    }));
+    const result = [];
+    let topicIndex = 0;
+    for (const [topicName, subtopicMap] of grouped) {
+      const topicSpan = [...subtopicMap.values()].reduce((s, p) => s + p.length, 0);
+      let isFirstTopicRow = true;
 
-    if (rollFilter.trim()) {
-      arr = arr.filter((s) => s.id.includes(rollFilter.trim()));
+      for (const [subtopicName, probs] of subtopicMap) {
+        let isFirstSubtopicRow = true;
+
+        for (const problem of probs) {
+          result.push({
+            problem,
+            topicName:    isFirstTopicRow    ? topicName    : null,
+            topicSpan:    isFirstTopicRow    ? topicSpan    : 0,
+            subtopicName: isFirstSubtopicRow ? subtopicName : null,
+            subtopicSpan: isFirstSubtopicRow ? probs.length : 0,
+            accentClass:  TOPIC_ACCENTS[topicIndex % TOPIC_ACCENTS.length],
+          });
+          isFirstTopicRow    = false;
+          isFirstSubtopicRow = false;
+        }
+      }
+      topicIndex++;
     }
+    return result;
+  }, [filteredProblems]);
 
-    if (sortByTotal) {
-      arr = [...arr].sort((a, b) => b.total - a.total);
-    }
-
-    return arr;
-  }, [students, totals, rollFilter, sortByTotal]);
-
-  const filteredProblems = useMemo(() => {
-    let arr = [...data];
-
-    if (textFilter.trim()) {
-      arr = arr.filter(
-        (p) =>
-          p.className.toLowerCase().includes(textFilter.toLowerCase()) ||
-          p.problemName.toLowerCase().includes(textFilter.toLowerCase())
-      );
-    }
-
-    if (difficultyFilter !== "All") {
-      arr = arr.filter((p) => p.category === difficultyFilter);
-    }
-
-    if (sortByCount === "asc") {
-      arr.sort((a, b) => a.countProb - b.countProb);
-    } else if (sortByCount === "desc") {
-      arr.sort((a, b) => b.countProb - a.countProb);
-    }
-
-    return arr;
-  }, [data, textFilter, difficultyFilter, sortByCount]);
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-48 text-slate-400 text-sm">
+        Loading standings…
+      </div>
+    );
+  }
 
   return (
-    <div className="w-full flex justify-center p-6 bg-gradient-to-b from-slate-50 to-slate-100">
-      <div className="w-[95%] bg-white rounded-2xl shadow-lg overflow-hidden border">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-emerald-600 to-teal-500 text-white text-center py-3 font-bold text-lg">
-          Master Table
-        </div>
-
-        {/* Controls */}
-        <div className="flex flex-wrap gap-3 p-4 border-b bg-gray-50">
+    <div className="w-full">
+      {/* Filter bar */}
+      <div className="flex flex-wrap items-center gap-2 mb-3">
+        <div className="relative">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400 pointer-events-none" />
           <input
-            type="text"
-            placeholder="Filter by Roll..."
+            placeholder="Filter by roll…"
             value={rollFilter}
             onChange={(e) => setRollFilter(e.target.value)}
-            className="px-3 py-2 border rounded-md focus:ring-2 focus:ring-emerald-400"
+            className="pl-8 pr-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-sky-400 focus:outline-none"
           />
+        </div>
+        <div className="relative">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400 pointer-events-none" />
           <input
-            type="text"
-            placeholder="Search Class/Problem..."
+            placeholder="Search problem…"
             value={textFilter}
             onChange={(e) => setTextFilter(e.target.value)}
-            className="px-3 py-2 border rounded-md focus:ring-2 focus:ring-emerald-400"
+            className="pl-8 pr-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-sky-400 focus:outline-none"
           />
-          <select
-            value={difficultyFilter}
-            onChange={(e) => setDifficultyFilter(e.target.value)}
-            className="px-3 py-2 border rounded-md focus:ring-2 focus:ring-emerald-400"
-          >
-            <option value="All">All Difficulties</option>
-            <option value="Easy">Easy</option>
-            <option value="Medium">Medium</option>
-            <option value="Hard">Hard</option>
-          </select>
-          <button
-            onClick={() => setSortByTotal((prev) => !prev)}
-            className={`px-4 py-2 rounded-md font-semibold ${
-              sortByTotal
-                ? "bg-emerald-600 text-white shadow-md"
-                : "bg-gray-200 text-gray-700"
-            }`}
-          >
-            {sortByTotal ? "Sorted by Total ↓" : "Sort by Total"}
-          </button>
-          <button
-            onClick={() =>
-              setSortByCount((prev) =>
-                prev === "asc" ? "desc" : prev === "desc" ? null : "asc"
-              )
-            }
-            className={`px-4 py-2 rounded-md font-semibold ${
-              sortByCount
-                ? "bg-emerald-600 text-white shadow-md"
-                : "bg-gray-200 text-gray-700"
-            }`}
-          >
-            {sortByCount === "asc"
-              ? "Count ↑"
-              : sortByCount === "desc"
-              ? "Count ↓"
-              : "Sort by Count"}
-          </button>
         </div>
+        <select
+          value={difficultyFilter}
+          onChange={(e) => setDifficultyFilter(e.target.value)}
+          className="px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-sky-400 focus:outline-none"
+        >
+          <option>All</option>
+          <option>Easy</option>
+          <option>Medium</option>
+          <option>Hard</option>
+        </select>
+        <span className="ml-auto text-xs text-slate-400">
+          {filteredProblems.length} problems · {filteredStudents.length} students
+        </span>
+      </div>
 
-        {/* Scrollable table */}
+      {/* Table */}
+      <div className="rounded-xl border border-slate-200 overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
-          <table className="table-auto border-collapse w-full text-sm">
+          <table className="border-collapse w-full text-sm" style={{ minWidth: "560px" }}>
             <thead>
-              <tr className="bg-gray-100">
-                <th className="sticky left-0 z-30 bg-white p-3 text-left min-w-[200px] border-r">
-                  Class Name
+              <tr className="bg-sky-50 border-b-2 border-sky-100">
+                <th className="sticky left-0 z-20 bg-sky-50 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600 min-w-[130px]">
+                  Topic
                 </th>
-                <th className="sticky left-[200px] z-30 bg-white p-3 text-left min-w-[250px] border-r">
+                <th className="sticky left-[130px] z-20 bg-sky-50 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600 min-w-[150px]">
+                  Subtopic
+                </th>
+                <th className="sticky left-[280px] z-20 bg-sky-50 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600 min-w-[200px]">
                   Problem
                 </th>
-                <th className="sticky left-[450px] z-30 bg-white p-3 text-center min-w-[80px] border-r">
-                  Count
+                <th className="bg-sky-50 px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-slate-600 min-w-[80px]">
+                  Diff
                 </th>
-                <th className="sticky left-[530px] z-30 bg-white p-3 text-center min-w-[80px] border-r">
-                  Link
-                </th>
-                <th className="p-3 text-center min-w-[100px]">Category</th>
-                <th className="p-3 text-center min-w-[120px]">Platform</th>
                 {filteredStudents.map((s) => (
-                  <th
-                    key={s.id}
-                    className="p-3 text-center min-w-[120px] border-l font-semibold text-gray-700"
-                  >
-                    {s.id}
+                  <th key={s.id} className="px-3 py-3 text-center text-xs font-semibold text-slate-500 min-w-[80px]">
+                    <button
+                      onClick={() => navigate(`/teacher/${batchId}/students/${s.id}`)}
+                      className="hover:text-sky-600 hover:underline transition-colors cursor-pointer"
+                    >
+                      {s.studentEnrollmentId || s.name}
+                    </button>
                   </th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {/* TOTAL row */}
-              <tr className="bg-emerald-50 font-semibold">
-                <td className="sticky left-0 bg-emerald-50 z-20 p-3 min-w-[200px] border-r">
+              {/* Totals row */}
+              <tr className="bg-teal-50 border-b-2 border-teal-100">
+                <td className="sticky left-0 z-10 bg-teal-50 px-4 py-2 font-bold text-teal-700 min-w-[130px]">
                   TOTAL
                 </td>
-                <td className="sticky left-[200px] bg-emerald-50 z-20 p-3 min-w-[250px] border-r"></td>
-                <td className="sticky left-[450px] bg-emerald-50 z-20 p-3 min-w-[80px] border-r"></td>
-                <td className="sticky left-[530px] bg-emerald-50 z-20 p-3 min-w-[80px] border-r"></td>
-                <td className="bg-emerald-50"></td>
-                <td className="bg-emerald-50"></td>
+                <td className="sticky left-[130px] z-10 bg-teal-50 px-4 py-2 min-w-[150px]" />
+                <td className="sticky left-[280px] z-10 bg-teal-50 px-4 py-2 min-w-[200px]" />
+                <td className="px-4 py-2 min-w-[80px]" />
                 {filteredStudents.map((s) => (
-                  <td
-                    key={`total-${s.id}`}
-                    className="p-2 text-center min-w-[120px] text-teal-700 font-bold"
-                  >
-                    {s.total}
+                  <td key={s.id} className="px-3 py-2 text-center min-w-[80px]">
+                    <span className="font-bold text-teal-700">{totals[s.id] ?? 0}</span>
+                    <span className="text-slate-400 text-[11px]">/{filteredProblems.length}</span>
                   </td>
                 ))}
               </tr>
 
-              {/* Problem rows */}
-              {filteredProblems.map((problem, i) => (
-                <tr key={i} className="border-t hover:bg-gray-50">
-                  <td className="sticky left-0 bg-white z-20 p-3 min-w-[200px] border-r">
-                    {problem.className}
+              {rows.length === 0 ? (
+                <tr>
+                  <td colSpan={4 + filteredStudents.length} className="px-4 py-10 text-center text-slate-400 text-sm">
+                    No problems match your filters.
                   </td>
-                  <td className="sticky left-[200px] bg-white z-20 p-3 min-w-[250px] border-r">
-                    {problem.problemName}
-                  </td>
-                  <td className="sticky left-[450px] bg-white z-20 p-3 text-center min-w-[80px] border-r">
-                    {problem.countProb}
-                  </td>
-                  <td className="sticky left-[530px] bg-white z-20 p-3 text-center min-w-[80px] border-r">
-                    <a href={problem.link} className="text-blue-600 underline">
-                      Link
-                    </a>
-                  </td>
-                  <td className="p-3 text-center min-w-[100px]">
-                    <DifficultyTag level={problem.category} />
-                  </td>
-                  <td className="p-3 text-center min-w-[120px]">
-                    {problem.platform}
-                  </td>
-                  {filteredStudents.map((s) => (
-                    <td
-                      key={`${i}-${s.id}`}
-                      className="p-2 text-center min-w-[120px]"
-                    >
-                      <StatusCell status={problem.solvedBy[s.id]} />
-                    </td>
-                  ))}
                 </tr>
-              ))}
+              ) : (
+                rows.map((row) => (
+                  <tr
+                    key={row.problem.assignmentId}
+                    className="group border-t border-slate-100 hover:bg-sky-50/50 transition-colors"
+                  >
+                    {/* Topic cell — only on first row of each topic */}
+                    {row.topicName !== null && (
+                      <td
+                        rowSpan={row.topicSpan}
+                        className={`sticky left-0 z-10 bg-white px-4 py-2.5 align-top min-w-[130px] font-semibold text-xs text-slate-800 ${row.accentClass}`}
+                      >
+                        {row.topicName}
+                      </td>
+                    )}
+
+                    {/* Subtopic cell — only on first row of each subtopic */}
+                    {row.subtopicName !== null && (
+                      <td
+                        rowSpan={row.subtopicSpan}
+                        className="sticky left-[130px] z-10 bg-white px-4 py-2.5 align-top min-w-[150px] text-xs text-slate-500 font-medium border-l border-slate-100"
+                      >
+                        {row.subtopicName}
+                      </td>
+                    )}
+
+                    {/* Problem */}
+                    <td className="sticky left-[280px] z-10 bg-white group-hover:bg-sky-50/50 px-4 py-2.5 min-w-[200px] border-l border-slate-100">
+                      <a
+                        href={row.problem.link}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-sky-600 hover:underline text-xs font-medium line-clamp-2 leading-snug"
+                      >
+                        {row.problem.title}
+                      </a>
+                    </td>
+
+                    {/* Difficulty */}
+                    <td className="px-4 py-2.5 text-center min-w-[80px]">
+                      <span className={diffBadge(row.problem.difficulty)}>
+                        {row.problem.difficulty}
+                      </span>
+                    </td>
+
+                    {/* Student cells */}
+                    {filteredStudents.map((s) => {
+                      const solved = statuses[`${row.problem.assignmentId}_${s.id}`] === "SOLVED";
+                      return (
+                        <td
+                          key={s.id}
+                          className={`px-3 py-2.5 text-center min-w-[80px] ${solved ? "bg-emerald-50 group-hover:bg-emerald-100/60" : ""}`}
+                        >
+                          {solved ? (
+                            <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 font-bold text-xs">
+                              ✓
+                            </span>
+                          ) : (
+                            <span className="text-slate-300 text-base">–</span>
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

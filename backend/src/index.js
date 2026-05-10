@@ -10,6 +10,7 @@ import studentRouter from './routes/students.routes.js';
 import batchRouter from './routes/batch.routes.js';
 import platformRouter from './routes/platform.routes.js';
 import assignmentRouter from './routes/assignment.routes.js';
+import analyticsRouter from './routes/analyticsRouter.js'
 
 const app = express();
 const PORT = process.env.PORT;
@@ -29,6 +30,7 @@ app.use('/api/teacher', teacherRouter);
 app.use('/api/student', studentRouter);
 app.use('/api/platform', platformRouter);
 app.use('/api/assignment', assignmentRouter);
+app.use('/api/analytics', analyticsRouter)
 
 prisma.$connect()
   .then(() => {
