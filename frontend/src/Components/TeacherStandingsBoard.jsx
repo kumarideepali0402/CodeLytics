@@ -1,28 +1,26 @@
 import { ExternalLink, Check } from "lucide-react";
 import { displayPlatform, platformStyleClass } from "../utils/problemDisplay";
 import {
-  buildSubtopicCfRows,
-  columnFooterTried,
+  buildSubtopicRows,
   problemStandingsKey,
   problemColumnLabel,
 } from "../utils/teacherBatchStandings";
 
-function cfHandleClass(rank) {
+function rankClass(rank) {
   if (rank === 1) return "font-bold text-red-700";
   if (rank === 2) return "font-bold text-orange-700";
   if (rank === 3) return "font-bold text-yellow-700";
   return "text-slate-800";
 }
 
-export default function TeacherCfStandingsBoard({
+export default function TeacherStandingsBoard({
   data,
   tIndex,
-  cIndex,
+  sIndex,
   solveMatrix,
   batchStudents,
-  onOpenProblemModal,
 }) {
-  const subProblems = data[tIndex]?.subtopics?.[cIndex]?.problems ?? [];
+  const subProblems = data[tIndex]?.subtopics?.[sIndex]?.problems ?? [];
   if (!subProblems.length) {
     return (
       <p className="py-8 text-center text-sm text-slate-600">
@@ -31,23 +29,14 @@ export default function TeacherCfStandingsBoard({
     );
   }
 
-  const cfRows = buildSubtopicCfRows(batchStudents, tIndex, cIndex, subProblems);
-  const cfFooterTried = columnFooterTried(batchStudents, tIndex, cIndex, subProblems);
-  const cfFooterAccepted = subProblems.map((p, pi) => {
-    const pk = problemStandingsKey(tIndex, cIndex, pi, p.name);
+  const rows = buildSubtopicRows(batchStudents, tIndex, sIndex, subProblems, solveMatrix);
+  const footerAccepted = subProblems.map((p, pi) => {
+    const pk = problemStandingsKey(tIndex, sIndex, pi, p.name);
     return solveMatrix.get(pk)?.solvedCount ?? 0;
   });
 
   return (
     <div className="overflow-hidden rounded border border-slate-300 bg-[#fbfbfd] shadow-sm">
-      <div className="border-b border-slate-300 bg-[#e8edf5] px-3 py-2">
-        <p className="text-[11px] font-bold uppercase tracking-wide text-slate-700">
-          Standings (sample class)
-        </p>
-        <p className="mt-0.5 text-[10px] text-slate-600">
-          A, B, C… are problem links. Green tick = solved (dummy data).
-        </p>
-      </div>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[720px] border-collapse text-[11px] leading-tight text-slate-900">
           <thead>
@@ -109,7 +98,7 @@ export default function TeacherCfStandingsBoard({
             </tr>
           </thead>
           <tbody>
-            {cfRows.map((row) => (
+            {rows.map((row) => (
               <tr
                 key={row.student.id}
                 className="border-b border-slate-200 odd:bg-white even:bg-[#f8f9fa]"
@@ -119,7 +108,7 @@ export default function TeacherCfStandingsBoard({
                   <span className="text-slate-800"> ({row.total})</span>
                 </td>
                 <td className="border-r border-slate-200 px-2 py-1.5">
-                  <span className={cfHandleClass(row.rank)}>{row.student.name}</span>
+                  <span className={rankClass(row.rank)}>{row.student.name}</span>
                 </td>
                 <td className="border-r border-slate-200 px-1 py-1.5 text-center font-mono font-bold tabular-nums text-slate-900">
                   {row.total}
@@ -137,27 +126,11 @@ export default function TeacherCfStandingsBoard({
                       className="border-l border-slate-200 px-0.5 py-1 align-middle text-center"
                     >
                       {cell.solved ? (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            onOpenProblemModal({ tIndex, cIndex, pIndex: pi, problem: prob, cell: cellMat })
-                          }
-                          className="inline-flex w-full items-center justify-center py-1 text-emerald-600 hover:bg-emerald-50/90"
-                          aria-label={`Solved — ${prob.name}`}
-                        >
+                        <span className="inline-flex w-full items-center justify-center py-1 text-emerald-600">
                           <Check className="h-4 w-4" strokeWidth={2.75} aria-hidden />
-                        </button>
+                        </span>
                       ) : (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            onOpenProblemModal({ tIndex, cIndex, pIndex: pi, problem: prob, cell: cellMat })
-                          }
-                          className="block w-full min-h-[2.25rem] cursor-pointer hover:bg-slate-100/90"
-                          aria-label={`Who solved ${prob.name}`}
-                        >
-                          <span className="sr-only">Open</span>
-                        </button>
+                        <span className="block w-full min-h-[2.25rem]" />
                       )}
                     </td>
                   );
@@ -168,20 +141,10 @@ export default function TeacherCfStandingsBoard({
           <tfoot>
             <tr className="border-t border-slate-300 bg-[#eef2f8]">
               <td colSpan={3} className="border-r border-slate-200 px-2 py-1.5 text-left font-bold text-slate-800">
-                Accepted
+                Total Solved
               </td>
-              {cfFooterAccepted.map((n, pi) => (
+              {footerAccepted.map((n, pi) => (
                 <td key={`acc-${pi}`} className="border-l border-slate-200 px-1 py-1.5 text-center font-mono font-semibold text-slate-800">
-                  {n}
-                </td>
-              ))}
-            </tr>
-            <tr className="border-t border-slate-200 bg-[#eef2f8]">
-              <td colSpan={3} className="border-r border-slate-200 px-2 py-1.5 text-left font-bold text-slate-800">
-                Tried
-              </td>
-              {cfFooterTried.map((n, pi) => (
-                <td key={`try-${pi}`} className="border-l border-slate-200 px-1 py-1.5 text-center font-mono font-semibold text-slate-800">
                   {n}
                 </td>
               ))}

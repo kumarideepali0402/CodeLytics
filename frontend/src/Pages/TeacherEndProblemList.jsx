@@ -11,151 +11,15 @@ import {
 import { normalizeOutlineShape, recomputeAll } from "../utils/batchOutlineShape";
 import { displayPlatform, platformStyleClass } from "../utils/problemDisplay";
 import {
-  buildSolveMatrix,
-  getStatsForSubtopic,
+  buildRealSolveMatrix,
   problemStandingsKey,
 } from "../utils/teacherBatchStandings";
-import ClassStandingsModal from "../Components/ClassStandingsModal";
+import SubtopicStandingsModal from "../Components/SubtopicStandingsModal";
 import ProblemStandingsModal from "../Components/ProblemStandingsModal"
 import axiosClient from "../utils/axiosClient";
 import { handleError } from "../utils/notification";
 
-const MOCK_BATCH_STUDENTS = [
-  { id: "demo-1", name: "Aarav Sharma" },
-  { id: "demo-2", name: "Priya Nair" },
-  { id: "demo-3", name: "Rahul Verma" },
-  { id: "demo-4", name: "Sneha Iyer" },
-  { id: "demo-5", name: "Karan Mehta" },
-  { id: "demo-6", name: "Ananya Das" },
-  { id: "demo-7", name: "Vikram Singh" },
-  { id: "demo-8", name: "Meera Krishnan" },
-];
 
-const DUMMY_OUTLINE = [
-  {
-    title: "Arrays & Strings",
-    subtopics: [
-      {
-        title: "Sliding Window",
-        problems: [
-          { name: "Longest Substring Without Repeating Characters", link: "https://leetcode.com/problems/longest-substring-without-repeating-characters/", difficulty: "Medium", platform: "LeetCode" },
-          { name: "Maximum Sum Subarray of Size K", link: "https://leetcode.com/problems/maximum-average-subarray-i/", difficulty: "Easy", platform: "LeetCode" },
-          { name: "Minimum Window Substring", link: "https://leetcode.com/problems/minimum-window-substring/", difficulty: "Hard", platform: "LeetCode" },
-          { name: "Permutation in String", link: "https://leetcode.com/problems/permutation-in-string/", difficulty: "Medium", platform: "LeetCode" },
-          { name: "Fruit Into Baskets", link: "https://leetcode.com/problems/fruit-into-baskets/", difficulty: "Medium", platform: "LeetCode" },
-        ],
-      },
-      {
-        title: "Two Pointers",
-        problems: [
-          { name: "Two Sum II", link: "https://leetcode.com/problems/two-sum-ii-input-array-is-sorted/", difficulty: "Medium", platform: "LeetCode" },
-          { name: "Container With Most Water", link: "https://leetcode.com/problems/container-with-most-water/", difficulty: "Medium", platform: "LeetCode" },
-          { name: "Trapping Rain Water", link: "https://leetcode.com/problems/trapping-rain-water/", difficulty: "Hard", platform: "LeetCode" },
-          { name: "3Sum", link: "https://leetcode.com/problems/3sum/", difficulty: "Medium", platform: "LeetCode" },
-        ],
-      },
-      {
-        title: "Prefix Sum",
-        problems: [
-          { name: "Range Sum Query", link: "https://leetcode.com/problems/range-sum-query-immutable/", difficulty: "Easy", platform: "LeetCode" },
-          { name: "Subarray Sum Equals K", link: "https://leetcode.com/problems/subarray-sum-equals-k/", difficulty: "Medium", platform: "LeetCode" },
-          { name: "Product of Array Except Self", link: "https://leetcode.com/problems/product-of-array-except-self/", difficulty: "Medium", platform: "LeetCode" },
-        ],
-      },
-      {
-        title: "Binary Search on Array",
-        problems: [
-          { name: "Search in Rotated Sorted Array", link: "https://leetcode.com/problems/search-in-rotated-sorted-array/", difficulty: "Medium", platform: "LeetCode" },
-          { name: "Find Minimum in Rotated Sorted Array", link: "https://leetcode.com/problems/find-minimum-in-rotated-sorted-array/", difficulty: "Medium", platform: "LeetCode" },
-          { name: "Median of Two Sorted Arrays", link: "https://leetcode.com/problems/median-of-two-sorted-arrays/", difficulty: "Hard", platform: "LeetCode" },
-        ],
-      },
-    ],
-  },
-  {
-    title: "Dynamic Programming",
-    subtopics: [
-      {
-        title: "1D DP",
-        problems: [
-          { name: "Climbing Stairs", link: "https://leetcode.com/problems/climbing-stairs/", difficulty: "Easy", platform: "LeetCode" },
-          { name: "House Robber", link: "https://leetcode.com/problems/house-robber/", difficulty: "Medium", platform: "LeetCode" },
-          { name: "Coin Change", link: "https://leetcode.com/problems/coin-change/", difficulty: "Medium", platform: "LeetCode" },
-          { name: "Word Break", link: "https://leetcode.com/problems/word-break/", difficulty: "Medium", platform: "LeetCode" },
-          { name: "Decode Ways", link: "https://leetcode.com/problems/decode-ways/", difficulty: "Medium", platform: "LeetCode" },
-        ],
-      },
-      {
-        title: "2D DP",
-        problems: [
-          { name: "Unique Paths", link: "https://leetcode.com/problems/unique-paths/", difficulty: "Medium", platform: "LeetCode" },
-          { name: "Longest Common Subsequence", link: "https://leetcode.com/problems/longest-common-subsequence/", difficulty: "Medium", platform: "LeetCode" },
-          { name: "Edit Distance", link: "https://leetcode.com/problems/edit-distance/", difficulty: "Hard", platform: "LeetCode" },
-          { name: "Interleaving String", link: "https://leetcode.com/problems/interleaving-string/", difficulty: "Medium", platform: "LeetCode" },
-        ],
-      },
-      {
-        title: "Knapsack",
-        problems: [
-          { name: "Partition Equal Subset Sum", link: "https://leetcode.com/problems/partition-equal-subset-sum/", difficulty: "Medium", platform: "LeetCode" },
-          { name: "Target Sum", link: "https://leetcode.com/problems/target-sum/", difficulty: "Medium", platform: "LeetCode" },
-          { name: "Ones and Zeroes", link: "https://leetcode.com/problems/ones-and-zeroes/", difficulty: "Medium", platform: "LeetCode" },
-        ],
-      },
-    ],
-  },
-  {
-    title: "Graphs",
-    subtopics: [
-      {
-        title: "BFS & DFS",
-        problems: [
-          { name: "Number of Islands", link: "https://leetcode.com/problems/number-of-islands/", difficulty: "Medium", platform: "LeetCode" },
-          { name: "Rotten Oranges", link: "https://leetcode.com/problems/rotting-oranges/", difficulty: "Medium", platform: "LeetCode" },
-          { name: "Word Ladder", link: "https://leetcode.com/problems/word-ladder/", difficulty: "Hard", platform: "LeetCode" },
-          { name: "Clone Graph", link: "https://leetcode.com/problems/clone-graph/", difficulty: "Medium", platform: "LeetCode" },
-        ],
-      },
-      {
-        title: "Shortest Path",
-        problems: [
-          { name: "Network Delay Time", link: "https://leetcode.com/problems/network-delay-time/", difficulty: "Medium", platform: "LeetCode" },
-          { name: "Cheapest Flights Within K Stops", link: "https://leetcode.com/problems/cheapest-flights-within-k-stops/", difficulty: "Medium", platform: "LeetCode" },
-          { name: "Path With Minimum Effort", link: "https://leetcode.com/problems/path-with-minimum-effort/", difficulty: "Medium", platform: "LeetCode" },
-        ],
-      },
-      {
-        title: "Topological Sort",
-        problems: [
-          { name: "Course Schedule", link: "https://leetcode.com/problems/course-schedule/", difficulty: "Medium", platform: "LeetCode" },
-          { name: "Course Schedule II", link: "https://leetcode.com/problems/course-schedule-ii/", difficulty: "Medium", platform: "LeetCode" },
-          { name: "Alien Dictionary", link: "https://leetcode.com/problems/alien-dictionary/", difficulty: "Hard", platform: "LeetCode" },
-        ],
-      },
-    ],
-  },
-  {
-    title: "Trees & BST",
-    subtopics: [
-      {
-        title: "Tree Traversals",
-        problems: [
-          { name: "Binary Tree Inorder Traversal", link: "https://leetcode.com/problems/binary-tree-inorder-traversal/", difficulty: "Easy", platform: "LeetCode" },
-          { name: "Binary Tree Level Order Traversal", link: "https://leetcode.com/problems/binary-tree-level-order-traversal/", difficulty: "Medium", platform: "LeetCode" },
-          { name: "Binary Tree Zigzag Level Order", link: "https://leetcode.com/problems/binary-tree-zigzag-level-order-traversal/", difficulty: "Medium", platform: "LeetCode" },
-        ],
-      },
-      {
-        title: "BST Operations",
-        problems: [
-          { name: "Validate Binary Search Tree", link: "https://leetcode.com/problems/validate-binary-search-tree/", difficulty: "Medium", platform: "LeetCode" },
-          { name: "Kth Smallest Element in BST", link: "https://leetcode.com/problems/kth-smallest-element-in-a-bst/", difficulty: "Medium", platform: "LeetCode" },
-          { name: "Lowest Common Ancestor of BST", link: "https://leetcode.com/problems/lowest-common-ancestor-of-a-binary-search-tree/", difficulty: "Medium", platform: "LeetCode" },
-        ],
-      },
-    ],
-  },
-];
 
 function difficultyBadge(difficulty) {
   const base = "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold tabular-nums";
@@ -167,32 +31,36 @@ function difficultyBadge(difficulty) {
 export default function TeacherProblemList() {
   const { id: batchId } = useParams();
   const [rawOutline, setRawOutline] = useState([]);
-  const [loading, setLoading] = useState(true); // ADDED: loading state for fetch lifecycle
-  const [batchStudents] = useState([...MOCK_BATCH_STUDENTS]);
+  const [loading, setLoading] = useState(true);
+  const [batchStudents, setBatchStudents] = useState([]);
+  const [statusMap, setStatusMap] = useState({});
   const [openTopics, setOpenTopics] = useState({});
   const [openSubtopics, setOpenSubtopics] = useState({});
   const [searchQuery, setSearchQuery] = useState("");
   const [difficultyFilter, setDifficultyFilter] = useState("all");
   const [standingsModal, setStandingsModal] = useState(null);
-  const [cfBoardModal, setCfBoardModal] = useState(null);
+  const [boardModal, setBoardModal] = useState(null);
 
   useEffect(() => {
     if (!batchId) return;
-    const fetchContentOutline = async () => {
-      setLoading(true); 
+    const fetchAll = async () => {
+      setLoading(true);
       try {
-        const res = await axiosClient.get(`/assignment/batch-outline/${batchId}`);
-        const contentOutline = res.data?.outline ?? []; // CHANGED: fallback to [] so rawOutline stays an array
-        setRawOutline(contentOutline);
+        const [outlineRes, standingsRes] = await Promise.all([
+          axiosClient.get(`/assignment/batch-outline/${batchId}`),
+          axiosClient.get(`/analytics/batch/${batchId}/solve-status`),
+        ]);
+        setRawOutline(outlineRes.data?.outline ?? []);
+        setBatchStudents(standingsRes.data?.students ?? []);
+        setStatusMap(standingsRes.data?.statuses ?? {});
       } catch (error) {
-        console.error("Error fetching content outline", error);
-        // CHANGED: was error.response.data?.msg which crashes on network errors (no response object)
+        console.error("Error fetching problem list", error);
         handleError(error.response?.data?.msg ?? "Failed to load problem list");
       } finally {
-        setLoading(false); // ADDED: always clear loading, success or failure
+        setLoading(false);
       }
     };
-    fetchContentOutline();
+    fetchAll();
   }, [batchId]);
 
   const data = useMemo(() => {
@@ -204,8 +72,10 @@ export default function TeacherProblemList() {
   }, [rawOutline]);
 
 
-  //TODO: understand it later
-  const solveMatrix = useMemo(() => buildSolveMatrix(data, batchStudents), [data, batchStudents]);
+  const solveMatrix = useMemo(
+    () => buildRealSolveMatrix(data, batchStudents, statusMap),
+    [data, batchStudents, statusMap]
+  );
 
   const toggleTopic = (topicId) => setOpenTopics((prev) => ({ ...prev, [topicId]: !prev[topicId] }));
   const toggleSubtopic = (topicId, subtopicId) => {
@@ -221,19 +91,6 @@ export default function TeacherProblemList() {
   };
 
 
-  // TODO: understand later
-  const totalProblemSlots = useMemo(() => {
-    let n = 0;
-    data.forEach((t) => t.subtopics.forEach((c) => { n += c.problems.length; }));
-    return n;
-  }, [data]);
-
-  // TODO: understand later
-  const totalSolves = useMemo(() => {
-    let n = 0;
-    solveMatrix.forEach((v) => { n += v.solvedCount; });
-    return n;
-  }, [solveMatrix]);
 
   return (
     <div className="mt-1 min-h-0 bg-gradient-to-b from-slate-50/80 to-white pb-8 text-slate-900">
@@ -264,7 +121,6 @@ export default function TeacherProblemList() {
           </div>
         )}
 
-        {/* CHANGED: added !loading guard so these panels don't flash on first render */}
         {!loading && data.length > 0 && (
           <div className="mb-2 flex flex-col gap-2 rounded-lg border border-slate-200/90 bg-white px-2.5 py-2 shadow-sm sm:flex-row sm:flex-wrap sm:items-center sm:gap-2 sm:py-1.5">
             <div className="relative min-w-0 flex-1 sm:min-w-[12rem]">
@@ -294,31 +150,14 @@ export default function TeacherProblemList() {
               </select>
             </div>
             <p className="flex items-center gap-1 text-[11px] text-slate-500 sm:ml-auto sm:shrink-0">
-              <Users className="h-3.5 w-3.5 shrink-0 opacity-70" aria-hidden />
+              <LayoutGrid className="h-3.5 w-3.5 shrink-0 opacity-70" aria-hidden />
               <span>
-                <span className="font-semibold tabular-nums text-slate-800">{batchStudents.length}</span> students (demo)
+                <span className="font-semibold tabular-nums text-slate-800">{data.length}</span> topics
               </span>
             </p>
           </div>
         )}
 
-        {/* CHANGED: added !loading guard to match the pattern above */}
-        {!loading && data.length > 0 && (
-          <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md border border-slate-200/80 bg-slate-50/90 px-2.5 py-1.5 text-[11px] text-slate-600">
-            <span className="font-semibold uppercase tracking-wide text-slate-500">Class solves (demo)</span>
-            <span className="font-bold tabular-nums text-slate-900">
-              {totalSolves}
-              <span className="font-semibold text-slate-400"> / </span>
-              {totalProblemSlots * batchStudents.length || 0}
-            </span>
-            <span className="hidden text-slate-300 sm:inline" aria-hidden>|</span>
-            <span><span className="text-slate-500">Problems</span> <strong className="tabular-nums text-slate-900">{totalProblemSlots}</strong></span>
-            <span className="text-slate-300">·</span>
-            <span><span className="text-slate-500">Students</span> <strong className="tabular-nums text-slate-900">{batchStudents.length}</strong></span>
-          </div>
-        )}
-
-       
         {!loading && data.length > 0 && (
           <div className="mb-4 overflow-hidden rounded-2xl border border-slate-200/90 bg-white text-slate-900 shadow-sm ring-1 ring-slate-100">
             {data.map((topic, tIndex) => (
@@ -338,7 +177,7 @@ export default function TeacherProblemList() {
                     <h2 className="truncate text-base font-semibold text-slate-900 sm:text-lg">{topic.title}</h2>
                   </div>
                   <span className="shrink-0 text-xs font-medium text-slate-500">
-                    {(topic.subtopics ?? []).reduce((a, c) => a + (c.problems?.length ?? 0), 0)} problems
+                    {(topic.subtopics ?? []).length} subtopics · {(topic.subtopics ?? []).reduce((a, c) => a + (c.problems?.length ?? 0), 0)} problems
                   </span>
                 </div>
 
@@ -353,7 +192,6 @@ export default function TeacherProblemList() {
                       topic.subtopics.map((subtopic, sIndex) => {
                         const subProblems = subtopic.problems ?? [];
                         const visibleProblems = subProblems.filter(problemVisible);
-                        const subStats = getStatsForSubtopic(data, tIndex, sIndex, solveMatrix, batchStudents);
 
                         return (
                           <div key={subtopic.id} className="rounded-xl border border-slate-100 bg-slate-50/40">
@@ -379,7 +217,7 @@ export default function TeacherProblemList() {
                                   type="button"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    if (subProblems.length > 0) setCfBoardModal({ tIndex, sIndex });
+                                    if (subProblems.length > 0) setBoardModal({ tIndex, sIndex });
                                   }}
                                   disabled={subProblems.length === 0}
                                   className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white shadow-sm hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500"
@@ -388,7 +226,7 @@ export default function TeacherProblemList() {
                                   Class standings
                                 </button>
                                 <span className="text-xs font-medium text-sky-800">
-                                  {subStats?.totalSolves ?? 0} class solves · {subProblems.length} problems
+                                  {subProblems.length} problems
                                 </span>
                               </div>
                             </div>
@@ -470,10 +308,9 @@ export default function TeacherProblemList() {
         )}
       </div>
 
-      <ClassStandingsModal
-        cfBoardModal={cfBoardModal}
-        setCfBoardModal={setCfBoardModal}
-        setStandingsModal={setStandingsModal}
+      <SubtopicStandingsModal
+        boardModal={boardModal}
+        setBoardModal={setBoardModal}
         data={data}
         solveMatrix={solveMatrix}
         batchStudents={batchStudents}

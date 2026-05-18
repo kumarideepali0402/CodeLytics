@@ -499,6 +499,7 @@ export const getBatchOutline = async (req, res) => {
 
       const d = a.problem.difficulty;
       classMap.get(a.subtopicId).problems.push({
+        assignmentId: a.id,
         name: a.problem.title,
         link: a.problem.link,
         difficulty: d.charAt(0) + d.slice(1).toLowerCase(),

@@ -37,7 +37,7 @@ export default function BatchTable() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const res = await axiosClient.get(`/analytics/batch/${batchId}/standings`);
+        const res = await axiosClient.get(`/analytics/batch/${batchId}/solve-status`);
         setProblems(res.data.problems);
         setStatuses(res.data.statuses);
         setStudents(res.data.students);
@@ -174,9 +174,12 @@ export default function BatchTable() {
                   <th key={s.id} className="px-3 py-3 text-center text-xs font-semibold text-slate-500 min-w-[80px]">
                     <button
                       onClick={() => navigate(`/teacher/${batchId}/students/${s.id}`)}
-                      className="hover:text-sky-600 hover:underline transition-colors cursor-pointer"
+                      className="hover:text-sky-600 hover:underline transition-colors cursor-pointer flex flex-col items-center gap-0.5"
                     >
-                      {s.studentEnrollmentId || s.name}
+                      {s.studentEnrollmentId && (
+                        <span className="text-slate-700">{s.studentEnrollmentId}</span>
+                      )}
+                      <span className={s.studentEnrollmentId ? "text-slate-400 font-normal text-[11px]" : ""}>{s.name}</span>
                     </button>
                   </th>
                 ))}

@@ -10,7 +10,7 @@ import { authDynamic, authTeacherOrCollege } from '../middlewares/auth.middlewar
 
 const analyticsRouter = express.Router();
 
-analyticsRouter.get('/batch/:batchId/standings', authDynamic, authTeacherOrCollege, getStandings);
+analyticsRouter.get('/batch/:batchId/solve-status', authDynamic, authTeacherOrCollege, getStandings);
 analyticsRouter.get('/batch/:batchId/students',  authDynamic, authTeacherOrCollege, getBatchStudents);
 analyticsRouter.get('/student/:studentId/profile', authDynamic, authTeacherOrCollege, getStudentProfile);
 

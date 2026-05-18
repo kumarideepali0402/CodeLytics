@@ -139,6 +139,7 @@ export const getWeeklyLeaderboard = async (req, res) => {
 };
 
 
+// Not currently used by the frontend — reserved for future insights (e.g. per-subtopic completion rates, at-risk students)
 export const getSubtopicLeaderboard = async (req, res) => {
     const { batchId, subtopicId } = req.params;
 
@@ -194,6 +195,7 @@ export const getSubtopicLeaderboard = async (req, res) => {
 };
 
 
+// Not currently used — intended for the "Who solved this?" problem modal to show solvers in chronological order (syncedAt)
 export const getQuestionSolvers = async(req, res) => {
     const {batchId, assignmentId} = req.params;
     try {
