@@ -1,5 +1,7 @@
 import express from 'express'
-import 'dotenv/config';
+import { config } from 'dotenv';
+config({ path: `.env.${process.env.NODE_ENV || 'development'}`, override: true });
+config({ override: false }); // fallback to .env for any missing vars
 import cors from 'cors'
 import cookieParser from 'cookie-parser'
 import prisma from './db/prisma.js';
@@ -15,8 +17,19 @@ import analyticsRouter from './routes/analyticsRouter.js'
 const app = express();
 const PORT = process.env.PORT;
 
+const allowedOrigins = (process.env.ORIGIN || '')
+  .split(',')
+  .map(o => o.trim().replace(/\/$/, ''))
+  .filter(Boolean);
+
 app.use(cors({
-  origin: process.env.ORIGIN || process.env.URL,
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error(`CORS: origin ${origin} not allowed`));
+    }
+  },
   credentials: true,
 }));
 app.use(cookieParser());
