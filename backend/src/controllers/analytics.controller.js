@@ -10,56 +10,32 @@ export const getStandings = async(req, res) => {
     }
 
     try {
-        const students = await prisma.studentBatch.findMany({
-            where: {batchId},
-            include: {
-                student: {
-                    select:{
-                    id: true,
-                    studentEnrollmentId: true,
-                    name: true,
-                    collegeId: true
-    
-                    
-                }
-                }
-                
-            }
-        });
-    
-        const assignments = await prisma.problemAssignment.findMany({
-            where:{ batchId },
-            include: {
-                topic: {
-                    select:{
-                        id: true,
-                        name: true,
-                    }
-                },
-    
-                subtopic: {
-                    select: {
-                        id: true,
-                        name: true,
-                        topicId: true
-                    }
-                },
-                
-                problem : {
-                    select: {
-                        id: true,
-                        title: true,
-                        link :true,
-                        difficulty: true,
-                        platformId: true
-    
+        const [students, assignments] = await Promise.all([
+            prisma.studentBatch.findMany({
+                where: {batchId},
+                include: {
+                    student: {
+                        select:{
+                            id: true,
+                            studentEnrollmentId: true,
+                            name: true,
+                            collegeId: true
+                        }
                     }
                 }
-            }
-        });
-    
+            }),
+            prisma.problemAssignment.findMany({
+                where:{ batchId },
+                include: {
+                    topic: { select:{ id: true, name: true } },
+                    subtopic: { select: { id: true, name: true, topicId: true } },
+                    problem : { select: { id: true, title: true, link :true, difficulty: true, platformId: true } }
+                }
+            })
+        ]);
+
         const assignmentIds = assignments.map((a) => a.id);
-    
+
         const statuses = await prisma.problemStatus.findMany({
             where: { problemAssignmentId: {in: assignmentIds}},
             select: { problemAssignmentId: true, status: true, studentId: true }
@@ -95,23 +71,25 @@ export const getBatchStudents = async (req, res) => {
     if (!batchId) return res.status(400).json({ msg: "batchId required" });
 
     try {
-        const studentBatches = await prisma.studentBatch.findMany({
-            where: { batchId },
-            include: {
-                student: {
-                    select: {
-                        id: true, name: true, email: true,
-                        studentEnrollmentId: true, studentStreak: true,
+        const [studentBatches, assignments] = await Promise.all([
+            prisma.studentBatch.findMany({
+                where: { batchId },
+                include: {
+                    student: {
+                        select: {
+                            id: true, name: true, email: true,
+                            studentEnrollmentId: true, studentStreak: true,
+                        }
                     }
-                }
-            },
-            orderBy: { student: { name: "asc" } }
-        });
+                },
+                orderBy: { student: { name: "asc" } }
+            }),
+            prisma.problemAssignment.findMany({
+                where: { batchId }, select: { id: true }
+            })
+        ]);
 
         const studentIds = studentBatches.map(sb => sb.studentId);
-        const assignments = await prisma.problemAssignment.findMany({
-            where: { batchId }, select: { id: true }
-        });
         const assignmentIds = assignments.map(a => a.id);
 
         const solvedCounts = await prisma.problemStatus.groupBy({
@@ -141,25 +119,26 @@ export const getStudentProfile = async (req, res) => {
     if (!studentId) return res.status(400).json({ msg: "studentId required" });
 
     try {
-        const student = await prisma.user.findUnique({
-            where: { id: studentId },
-            select: {
-                id: true, name: true, email: true,
-                studentEnrollmentId: true, studentStreak: true,
-                platformAccounts: {
-                    select: {
-                        id: true, handle: true, lastSyncedAt: true,
-                        platform: { select: { id: true, name: true } }
+        const [student, solvedCount] = await Promise.all([
+            prisma.user.findUnique({
+                where: { id: studentId },
+                select: {
+                    id: true, name: true, email: true,
+                    studentEnrollmentId: true, studentStreak: true,
+                    platformAccounts: {
+                        select: {
+                            id: true, handle: true, lastSyncedAt: true,
+                            platform: { select: { id: true, name: true } }
+                        }
                     }
                 }
-            }
-        });
+            }),
+            prisma.problemStatus.count({
+                where: { studentId, status: "SOLVED" }
+            })
+        ]);
 
         if (!student) return res.status(404).json({ msg: "Student not found" });
-
-        const solvedCount = await prisma.problemStatus.count({
-            where: { studentId, status: "SOLVED" }
-        });
 
         return res.status(200).json({ student: { ...student, solvedCount } });
     } catch (error) {
