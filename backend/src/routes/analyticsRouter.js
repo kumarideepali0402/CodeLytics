@@ -5,6 +5,7 @@ import {
     getWeeklyLeaderboard,
     getSubtopicLeaderboard,
     getQuestionSolvers,
+    getWeeklyProgress,
 } from '../controllers/standings.controller.js';
 import { authDynamic, authTeacherOrCollege } from '../middlewares/auth.middleware.js';
 
@@ -19,5 +20,6 @@ analyticsRouter.get('/batch/:batchId/leaderboard', authDynamic, authTeacherOrCol
 analyticsRouter.get('/batch/:batchId/leaderboard/weekly', authDynamic, authTeacherOrCollege, getWeeklyLeaderboard);
 analyticsRouter.get('/batch/:batchId/leaderboard/subtopic/:subtopicId', authDynamic, authTeacherOrCollege, getSubtopicLeaderboard);
 analyticsRouter.get('/batch/:batchId/assignment/:assignmentId/solvers', authDynamic, authTeacherOrCollege, getQuestionSolvers);
+analyticsRouter.get('/batch/:batchId/weekly-progress', authDynamic, authTeacherOrCollege, getWeeklyProgress);
 
 export default analyticsRouter;

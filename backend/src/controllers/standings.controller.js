@@ -195,6 +195,99 @@ export const getSubtopicLeaderboard = async (req, res) => {
 };
 
 
+export const getWeeklyProgress = async (req, res) => {
+    const { batchId } = req.params;
+    const msPerWeek = 7 * 24 * 60 * 60 * 1000;
+
+    function toMonday(date) {
+        const d = new Date(date);
+        const day = d.getDay();
+        d.setDate(d.getDate() + (day === 0 ? -6 : 1 - day));
+        d.setHours(0, 0, 0, 0);
+        return d;
+    }
+
+    try {
+        const { studentBatches, studentIds, assignmentIds } = await fetchBatchContext(batchId);
+
+        if (assignmentIds.length === 0) {
+            return res.status(200).json({ weeks: [], students: [] });
+        }
+
+        // Anchor Week 1 at the Monday of the earliest assignment in this batch
+        const firstAssignment = await prisma.problemAssignment.findFirst({
+            where: { batchId },
+            orderBy: { assignedDate: "asc" },
+            select: { assignedDate: true },
+        });
+
+        if (!firstAssignment) {
+            return res.status(200).json({ weeks: [], students: [] });
+        }
+
+        const firstMonday = toMonday(firstAssignment.assignedDate);
+        const currentMonday = toMonday(new Date());
+
+        const numWeeks = Math.floor((currentMonday - firstMonday) / msPerWeek) + 1;
+
+        const weeks = [];
+        for (let i = 0; i < numWeeks; i++) {
+            const start = new Date(firstMonday);
+            start.setDate(firstMonday.getDate() + i * 7);
+            const end = new Date(start);
+            end.setDate(start.getDate() + 7);
+            weeks.push({ weekStart: start, weekEnd: end });
+        }
+
+        const since = weeks[0].weekStart;
+        const until = weeks[numWeeks - 1].weekEnd;
+
+        const solvedStatuses = await prisma.problemStatus.findMany({
+            where: {
+                studentId: { in: studentIds },
+                problemAssignmentId: { in: assignmentIds },
+                status: "SOLVED",
+                syncedAt: { gte: since, lt: until },
+            },
+            select: { studentId: true, syncedAt: true },
+        });
+
+        const countMap = {};
+        for (const { studentId, syncedAt } of solvedStatuses) {
+            const weekIdx = Math.floor((syncedAt.getTime() - since.getTime()) / msPerWeek);
+            if (weekIdx < 0 || weekIdx >= numWeeks) continue;
+            if (!countMap[studentId]) countMap[studentId] = new Array(numWeeks).fill(0);
+            countMap[studentId][weekIdx]++;
+        }
+
+        const students = studentBatches
+            .map((sb) => {
+                const weeklySolved = countMap[sb.studentId] ?? new Array(numWeeks).fill(0);
+                return {
+                    studentId: sb.student.id,
+                    name: sb.student.name,
+                    enrollmentId: sb.student.studentEnrollmentId,
+                    total: weeklySolved.reduce((s, v) => s + v, 0),
+                    weeklySolved,
+                };
+            })
+            .sort((a, b) => b.total - a.total);
+
+        return res.status(200).json({
+            weeks: weeks.map((w, i) => ({
+                label: `Week ${i + 1}`,
+                weekStart: w.weekStart.toISOString(),
+                weekEnd: w.weekEnd.toISOString(),
+            })),
+            students,
+        });
+    } catch (error) {
+        console.error("[getWeeklyProgress]", error);
+        return res.status(500).json({ msg: "Error fetching weekly progress" });
+    }
+};
+
+
 // Not currently used — intended for the "Who solved this?" problem modal to show solvers in chronological order (syncedAt)
 export const getQuestionSolvers = async(req, res) => {
     const {batchId, assignmentId} = req.params;

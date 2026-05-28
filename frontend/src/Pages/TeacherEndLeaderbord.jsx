@@ -5,20 +5,6 @@ import WeeklyLeaderboard from "../Components/WeeklyLeaderboard";
 import OverallLeaderboard from "../Components/OverallLeaderboard";
 
 /* ── Helpers ─────────────────────────────────────────────────────────────── */
-function getLastNMondays(n) {
-  const mondays = [];
-  const d = new Date();
-  const day = d.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  d.setDate(d.getDate() + diff);
-  d.setHours(0, 0, 0, 0);
-  for (let i = 0; i < n; i++) {
-    mondays.push(new Date(d));
-    d.setDate(d.getDate() - 7);
-  }
-  return mondays;
-}
-
 const toRow = (e) => ({ name: e.name, roll: e.enrollmentId ?? "", solved: e.solved });
 
 /* ── Constants ───────────────────────────────────────────────────────────── */
@@ -77,30 +63,33 @@ export default function LeaderboardDashboard() {
     const fetchAll = async () => {
       setLoading(true);
       try {
-        const mondays = getLastNMondays(5);
-        const [allTimeRes, ...weeklyResults] = await Promise.all([
+        const [allTimeRes, progressRes] = await Promise.all([
           axiosClient.get(`/analytics/batch/${batchId}/leaderboard`),
-          ...mondays.map((m) =>
-            axiosClient.get(`/analytics/batch/${batchId}/leaderboard/weekly?weekStart=${m.toISOString()}`)
-          ),
+          axiosClient.get(`/analytics/batch/${batchId}/weekly-progress`),
         ]);
 
         const allTime = allTimeRes.data.leaderboard ?? [];
         setAllTimeTop3(allTime.slice(0, 3).map(toRow));
         setAllTimeFull(allTime.map(toRow));
 
-        const currentWeek = weeklyResults[0]?.data?.leaderboard ?? [];
-        setWeeklyTop3(currentWeek.slice(0, 3).map(toRow));
+        const { weeks = [], students = [] } = progressRes.data;
 
-        const history = weeklyResults
-          .map((r, i) => {
-            const lb = r?.data?.leaderboard ?? [];
-            const start = r?.data?.weekStart ? new Date(r.data.weekStart) : mondays[i];
-            const label = `Week of ${start.toLocaleDateString("en-IN", { day: "numeric", month: "short" })}`;
-            return { week: label, data: lb.slice(0, 3).map(toRow), totalSolves: lb.reduce((s, e) => s + e.solved, 0) };
+        const history = weeks
+          .map((w, i) => {
+            const sorted = [...students]
+              .map((s) => ({ name: s.name, roll: s.enrollmentId ?? "", solved: s.weeklySolved[i] ?? 0 }))
+              .sort((a, b) => b.solved - a.solved);
+            return {
+              week: w.label,
+              data: sorted.slice(0, 3),
+              totalSolves: sorted.reduce((sum, s) => sum + s.solved, 0),
+            };
           })
-          .filter((w) => w.totalSolves > 0);
+          .filter((w) => w.totalSolves > 0)
+          .slice(-5);
+
         setWeeklyHistory(history);
+        setWeeklyTop3(history[history.length - 1]?.data ?? []);
       } catch (err) {
         console.error("[LeaderboardDashboard] fetch error", err);
       } finally {
