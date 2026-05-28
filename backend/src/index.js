@@ -44,6 +44,7 @@ app.use('/api/student', studentRouter);
 app.use('/api/platform', platformRouter);
 app.use('/api/assignment', assignmentRouter);
 app.use('/api/analytics', analyticsRouter)
+app.get('/health', (_, res) => res.json({ status: 'ok' }))
 
 prisma.$connect()
   .then(() => {

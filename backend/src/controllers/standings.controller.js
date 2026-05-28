@@ -208,20 +208,16 @@ export const getWeeklyProgress = async (req, res) => {
     }
 
     try {
-        const { studentBatches, studentIds, assignmentIds } = await fetchBatchContext(batchId);
+        const [{ studentBatches, studentIds, assignmentIds }, firstAssignment] = await Promise.all([
+            fetchBatchContext(batchId),
+            prisma.problemAssignment.findFirst({
+                where: { batchId },
+                orderBy: { assignedDate: "asc" },
+                select: { assignedDate: true },
+            }),
+        ]);
 
-        if (assignmentIds.length === 0) {
-            return res.status(200).json({ weeks: [], students: [] });
-        }
-
-        // Anchor Week 1 at the Monday of the earliest assignment in this batch
-        const firstAssignment = await prisma.problemAssignment.findFirst({
-            where: { batchId },
-            orderBy: { assignedDate: "asc" },
-            select: { assignedDate: true },
-        });
-
-        if (!firstAssignment) {
+        if (assignmentIds.length === 0 || !firstAssignment) {
             return res.status(200).json({ weeks: [], students: [] });
         }
 
