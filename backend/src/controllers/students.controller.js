@@ -1,6 +1,58 @@
 import bcrypt from "bcrypt";
 import prisma from "../db/prisma.js";
 
+export const getMyProblemStats = async (req, res) => {
+  const studentId = req.user?.id;
+  if (!studentId) return res.status(401).json({ msg: "Unauthorized" });
+
+  const empty = { EASY: { solved: 0, total: 0 }, MEDIUM: { solved: 0, total: 0 }, HARD: { solved: 0, total: 0 } };
+
+  try {
+    const studentBatch = await prisma.studentBatch.findFirst({
+      where: { studentId },
+      select: { batchId: true },
+    });
+    if (!studentBatch) return res.status(200).json({ stats: empty });
+
+    const { batchId } = studentBatch;
+
+    const assignments = await prisma.problemAssignment.findMany({
+      where: { batchId },
+      select: { id: true, problem: { select: { difficulty: true } } },
+    });
+
+    const assignmentIds = assignments.map((a) => a.id);
+    const diffMap = {};
+    const totalByDiff = { EASY: 0, MEDIUM: 0, HARD: 0 };
+    for (const a of assignments) {
+      diffMap[a.id] = a.problem.difficulty;
+      totalByDiff[a.problem.difficulty] = (totalByDiff[a.problem.difficulty] || 0) + 1;
+    }
+
+    const solved = await prisma.problemStatus.findMany({
+      where: { studentId, status: "SOLVED", problemAssignmentId: { in: assignmentIds } },
+      select: { problemAssignmentId: true },
+    });
+
+    const solvedByDiff = { EASY: 0, MEDIUM: 0, HARD: 0 };
+    for (const s of solved) {
+      const d = diffMap[s.problemAssignmentId];
+      if (d) solvedByDiff[d] = (solvedByDiff[d] || 0) + 1;
+    }
+
+    return res.status(200).json({
+      stats: {
+        EASY:   { solved: solvedByDiff.EASY,   total: totalByDiff.EASY   },
+        MEDIUM: { solved: solvedByDiff.MEDIUM, total: totalByDiff.MEDIUM },
+        HARD:   { solved: solvedByDiff.HARD,   total: totalByDiff.HARD   },
+      },
+    });
+  } catch (error) {
+    console.error("[getMyProblemStats]", error);
+    return res.status(500).json({ msg: "Error fetching problem stats" });
+  }
+};
+
 export const getMyProfile = async (req, res) => {
   const studentId = req.user?.id;
   if (!studentId) return res.status(401).json({ msg: "Unauthorized" });

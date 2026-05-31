@@ -1,6 +1,6 @@
 import Router from "express";
 import { authCollege, authDynamic, authStudent } from "../middlewares/auth.middleware.js";
-import { createStudent, getBatchStudent, getMyBatchOutline, getMyProfile } from "../controllers/students.controller.js";
+import { createStudent, getBatchStudent, getMyBatchOutline, getMyProfile, getMyProblemStats } from "../controllers/students.controller.js";
 import { getHandles,upsertHandle, deleteHandle, generateSyncToken, syncCF,extSync } from "../controllers/platformHandle.controller.js";
 
 const studentRouter = Router();
@@ -9,6 +9,7 @@ studentRouter.post("/create", authDynamic, authCollege, createStudent);
 studentRouter.get("/get/:id", authDynamic, authCollege, getBatchStudent);
 studentRouter.get("/my-batch-outline", authDynamic, authStudent, getMyBatchOutline);
 studentRouter.get("/me", authDynamic, authStudent, getMyProfile);
+studentRouter.get("/problem-stats", authDynamic, authStudent, getMyProblemStats);
 studentRouter.get("/platform-handles", authDynamic, authStudent, getHandles);
 studentRouter.post("/platform-handles", authDynamic, authStudent, upsertHandle);
 studentRouter.delete("/platform-handles/:platformId", authDynamic, authStudent, deleteHandle);

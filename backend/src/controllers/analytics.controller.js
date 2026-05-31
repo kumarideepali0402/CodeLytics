@@ -43,7 +43,7 @@ export const getStandings = async(req, res) => {
     
         const statusMap = {};
         statuses.map((s) => {
-            statusMap[`${s.problemAssignmentId}_${s.studentId}`] = s.status  // ✅
+            statusMap[`${s.problemAssignmentId}_${s.studentId}`] = s.status  
     
         })
         return res.status(200).json({
