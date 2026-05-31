@@ -45,6 +45,8 @@ export default function TeacherEndContent() {
   // ── New-subtopic form ──────────────────────────────────────────────────────
   const [addSubtopicForTopic, setAddSubtopicForTopic] = useState(false);
   const [newSubtopic, setNewSubtopic] = useState({ name: "" });
+  const [savingSubtopic, setSavingSubtopic] = useState(false);
+  const [subtopicFormError, setSubtopicFormError] = useState("");
 
   // ── Subtopic accordion  ─────────────────────────────────
   const [expandedSubtopicIds, setExpandedSubtopicIds] = useState(new Set());
@@ -206,46 +208,42 @@ export default function TeacherEndContent() {
   };
 
   const addSubtopic = async() => {
-    if (!newSubtopic.name.trim() || !selectedTopicId) return;
-      try {
-        const res = await axiosClient.post("/assignment/create-subtopic",{
-          topicId: selectedTopicId,
-          name : newSubtopic.name 
-        })
-        const subtopic = res.data?.subTopic;
-      setData((prev) => 
-        
-        prev.map((t) => 
-        (
-            t.serverTopicId === selectedTopicId ? {
-            ...t,
-             subtopics: [
-              ...(t.subtopics ?? []),
-              {
-                serverSubtopicId: subtopic.id,
-                name : subtopic.name,
-                problems: []
+    setSubtopicFormError("");
+    if (!selectedTopicId) {
+      setSubtopicFormError("No topic selected — please select a topic first.");
+      return;
+    }
+    if (!newSubtopic.name.trim()) {
+      setSubtopicFormError("Subtopic name is required.");
+      return;
+    }
+    setSavingSubtopic(true);
+    try {
+      const res = await axiosClient.post("/assignment/create-subtopic", {
+        topicId: selectedTopicId,
+        name: newSubtopic.name,
+      });
+      const subtopic = res.data?.subTopic;
+      setData((prev) =>
+        prev.map((t) =>
+          t.serverTopicId === selectedTopicId
+            ? {
+                ...t,
+                subtopics: [
+                  ...(t.subtopics ?? []),
+                  { serverSubtopicId: subtopic.id, name: subtopic.name, problems: [] },
+                ],
               }
-
-                
-             ]
-
-          } : t
+            : t
         )
-      ) 
-          
-        )
-
-
-      
-        setNewSubtopic({ name: "" });
-        setAddSubtopicForTopic(false);
-        
-      } catch (error) {
-        handleError(error?.response?.data?.msg || "Error creating the subtopic")
-        
-      } 
-      
+      );
+      setNewSubtopic({ name: "" });
+      setAddSubtopicForTopic(false);
+    } catch (error) {
+      handleError(error?.response?.data?.msg || "Error creating the subtopic");
+    } finally {
+      setSavingSubtopic(false);
+    }
   };
 
   const goAssignProblems = (topicId, subtopicId) => {
@@ -426,29 +424,51 @@ export default function TeacherEndContent() {
                         <input
                           type="text"
                           placeholder="Name (e.g. Lecture 1: Sorting)"
-                          className="rounded-md border border-slate-200 px-2 py-1.5 text-sm sm:col-span-2"
+                          className={`rounded-md border px-2 py-1.5 text-sm sm:col-span-2 ${
+                            subtopicFormError && !newSubtopic.name.trim()
+                              ? "border-red-400 bg-red-50 focus:outline-none focus:ring-1 focus:ring-red-400"
+                              : "border-slate-200"
+                          }`}
                           value={newSubtopic.name}
-                          onChange={(e) =>
-                            setNewSubtopic({ ...newSubtopic, name: e.target.value })
-                          }
+                          onChange={(e) => {
+                            setSubtopicFormError("");
+                            setNewSubtopic({ ...newSubtopic, name: e.target.value });
+                          }}
+                          disabled={savingSubtopic}
                         />
-                        
+                        {subtopicFormError && (
+                          <p className="sm:col-span-2 text-xs text-red-500 mt-0.5">{subtopicFormError}</p>
+                        )}
                       </div>
                       <div className="mt-3 flex gap-2">
                         <button
                           type="button"
                           onClick={addSubtopic}
-                          className="rounded-md bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-800"
+                          disabled={savingSubtopic}
+                          className="inline-flex items-center gap-1.5 rounded-md bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-800 disabled:opacity-60 disabled:cursor-not-allowed"
                         >
-                          Save subtopic
+                          {savingSubtopic ? (
+                            <>
+                              <span className="inline-flex gap-0.5">
+                                <span className="animate-bounce [animation-delay:0ms]">·</span>
+                                <span className="animate-bounce [animation-delay:150ms]">·</span>
+                                <span className="animate-bounce [animation-delay:300ms]">·</span>
+                              </span>
+                              Saving…
+                            </>
+                          ) : (
+                            "Save subtopic"
+                          )}
                         </button>
                         <button
                           type="button"
+                          disabled={savingSubtopic}
                           onClick={() => {
                             setAddSubtopicForTopic(false);
-                            setNewSubtopic({ name: ""});
+                            setNewSubtopic({ name: "" });
+                            setSubtopicFormError("");
                           }}
-                          className="rounded-md border border-slate-200 px-3 py-1.5 text-xs text-slate-600"
+                          className="rounded-md border border-slate-200 px-3 py-1.5 text-xs text-slate-600 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           Cancel
                         </button>

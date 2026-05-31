@@ -20,6 +20,10 @@ export default function TeacherProblemsPage() {
   const [isAddPlatformOpen, setIsAddPlatformOpen] = useState(false);
   const [newProblem, setNewProblem] = useState(initialForm);
   const [platformName, setPlatformName] = useState("");
+  const [savingPlatform, setSavingPlatform] = useState(false);
+  const [platformError, setPlatformError] = useState("");
+  const [savingProblem, setSavingProblem] = useState(false);
+  const [problemFormErrors, setProblemFormErrors] = useState({ platformId: "", title: "", link: "" });
   const [platforms, setPlatforms] = useState([]);
   const [problems, setProblems] = useState([]);
   const [selectedIds, setSelectedIds] = useState(new Set());
@@ -54,11 +58,23 @@ export default function TeacherProblemsPage() {
 
   const handleAddProblem = async (e) => {
     e.preventDefault();
-    if (!newProblem.title?.trim() || !newProblem.link?.trim() || !newProblem.platformId) return;
-    const createdProblem = await axiosClient.post("/assignment/create-problem", newProblem);
-    setProblems((prev) => [...prev, createdProblem.data.problem]);
-    setNewProblem(initialForm);
-    closeModal();
+    const errors = { platformId: "", title: "", link: "" };
+    if (!newProblem.platformId) errors.platformId = "Platform is required.";
+    if (!newProblem.title?.trim()) errors.title = "Title is required.";
+    if (!newProblem.link?.trim()) errors.link = "URL is required.";
+    if (Object.values(errors).some(Boolean)) { setProblemFormErrors(errors); return; }
+    setSavingProblem(true);
+    try {
+      const createdProblem = await axiosClient.post("/assignment/create-problem", newProblem);
+      setProblems((prev) => [...prev, createdProblem.data.problem]);
+      setNewProblem(initialForm);
+      setProblemFormErrors({ platformId: "", title: "", link: "" });
+      closeModal();
+    } catch (error) {
+      setProblemFormErrors((prev) => ({ ...prev, title: error?.response?.data?.msg || "Error creating problem." }));
+    } finally {
+      setSavingProblem(false);
+    }
   };
 
   const handleAssign = async () => {
@@ -282,13 +298,21 @@ export default function TeacherProblemsPage() {
             <form
               onSubmit={async (e) => {
                 e.preventDefault();
+                setPlatformError("");
+                if (!platformName.trim()) {
+                  setPlatformError("Platform name is required.");
+                  return;
+                }
+                setSavingPlatform(true);
                 try {
                   const platform = await axiosClient.post("/platform/create", { name: platformName });
                   setPlatforms([...platforms, platform.data.platform]);
                   setPlatformName("");
                   setIsAddPlatformOpen(false);
                 } catch (error) {
-                  console.log(error?.response?.data?.msg);
+                  setPlatformError(error?.response?.data?.msg || "Error creating platform.");
+                } finally {
+                  setSavingPlatform(false);
                 }
               }}
               className="mt-5 flex flex-col gap-4"
@@ -302,22 +326,45 @@ export default function TeacherProblemsPage() {
                   type="text"
                   placeholder="e.g. LeetCode"
                   value={platformName}
-                  onChange={(e) => setPlatformName(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-2.5 text-sm outline-none ring-amber-200 transition focus:border-amber-400 focus:bg-white focus:ring-2"
-                  required
+                  onChange={(e) => { setPlatformError(""); setPlatformName(e.target.value); }}
+                  className={`w-full rounded-xl border px-3 py-2.5 text-sm outline-none ring-amber-200 transition focus:ring-2 ${
+                    platformError
+                      ? "border-red-400 bg-red-50 focus:border-red-400 focus:ring-red-200"
+                      : "border-slate-200 bg-slate-50/80 focus:border-amber-400 focus:bg-white"
+                  }`}
+                  disabled={savingPlatform}
                   autoFocus
                 />
+                {platformError && (
+                  <p className="mt-1 text-xs text-red-500">{platformError}</p>
+                )}
               </div>
               <div className="flex justify-end gap-2 pt-2">
                 <button
                   type="button"
-                  onClick={() => { setIsAddPlatformOpen(false); setPlatformName(""); }}
-                  className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                  disabled={savingPlatform}
+                  onClick={() => { setIsAddPlatformOpen(false); setPlatformName(""); setPlatformError(""); }}
+                  className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Cancel
                 </button>
-                <button type="submit" className="rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-slate-800">
-                  Add
+                <button
+                  type="submit"
+                  disabled={savingPlatform}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {savingPlatform ? (
+                    <>
+                      <span className="inline-flex gap-0.5">
+                        <span className="animate-bounce [animation-delay:0ms]">·</span>
+                        <span className="animate-bounce [animation-delay:150ms]">·</span>
+                        <span className="animate-bounce [animation-delay:300ms]">·</span>
+                      </span>
+                      Adding…
+                    </>
+                  ) : (
+                    "Add"
+                  )}
                 </button>
               </div>
             </form>
@@ -360,14 +407,16 @@ export default function TeacherProblemsPage() {
                 <select
                   id="pb-platform"
                   value={newProblem.platformId}
-                  onChange={(e) => setNewProblem({ ...newProblem, platformId: e.target.value })}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-2.5 text-sm font-medium text-slate-900 outline-none ring-amber-200 transition focus:border-amber-400 focus:bg-white focus:ring-2"
+                  disabled={savingProblem}
+                  onChange={(e) => { setProblemFormErrors((p) => ({ ...p, platformId: "" })); setNewProblem({ ...newProblem, platformId: e.target.value }); }}
+                  className={`w-full rounded-xl border px-3 py-2.5 text-sm font-medium text-slate-900 outline-none ring-amber-200 transition focus:ring-2 disabled:opacity-50 ${problemFormErrors.platformId ? "border-red-400 bg-red-50 focus:border-red-400 focus:ring-red-200" : "border-slate-200 bg-slate-50/80 focus:border-amber-400 focus:bg-white"}`}
                 >
                   <option value="">Select Platform</option>
                   {platforms.map((p) => (
                     <option key={p.id} value={p.id}>{p.name}</option>
                   ))}
                 </select>
+                {problemFormErrors.platformId && <p className="mt-1 text-xs text-red-500">{problemFormErrors.platformId}</p>}
               </div>
               <div>
                 <label htmlFor="pb-name" className="mb-1 block text-xs font-semibold text-slate-600">
@@ -378,10 +427,11 @@ export default function TeacherProblemsPage() {
                   type="text"
                   placeholder="e.g. Two Sum"
                   value={newProblem.title}
-                  onChange={(e) => setNewProblem({ ...newProblem, title: e.target.value })}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-2.5 text-sm outline-none ring-amber-200 transition focus:border-amber-400 focus:bg-white focus:ring-2"
-                  required
+                  disabled={savingProblem}
+                  onChange={(e) => { setProblemFormErrors((p) => ({ ...p, title: "" })); setNewProblem({ ...newProblem, title: e.target.value }); }}
+                  className={`w-full rounded-xl border px-3 py-2.5 text-sm outline-none ring-amber-200 transition focus:ring-2 disabled:opacity-50 ${problemFormErrors.title ? "border-red-400 bg-red-50 focus:border-red-400 focus:ring-red-200" : "border-slate-200 bg-slate-50/80 focus:border-amber-400 focus:bg-white"}`}
                 />
+                {problemFormErrors.title && <p className="mt-1 text-xs text-red-500">{problemFormErrors.title}</p>}
               </div>
               <div>
                 <label htmlFor="pb-link" className="mb-1 block text-xs font-semibold text-slate-600">
@@ -392,10 +442,11 @@ export default function TeacherProblemsPage() {
                   type="text"
                   placeholder="https://…"
                   value={newProblem.link}
-                  onChange={(e) => setNewProblem({ ...newProblem, link: e.target.value })}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-2.5 text-sm outline-none ring-amber-200 transition focus:border-amber-400 focus:bg-white focus:ring-2"
-                  required
+                  disabled={savingProblem}
+                  onChange={(e) => { setProblemFormErrors((p) => ({ ...p, link: "" })); setNewProblem({ ...newProblem, link: e.target.value }); }}
+                  className={`w-full rounded-xl border px-3 py-2.5 text-sm outline-none ring-amber-200 transition focus:ring-2 disabled:opacity-50 ${problemFormErrors.link ? "border-red-400 bg-red-50 focus:border-red-400 focus:ring-red-200" : "border-slate-200 bg-slate-50/80 focus:border-amber-400 focus:bg-white"}`}
                 />
+                {problemFormErrors.link && <p className="mt-1 text-xs text-red-500">{problemFormErrors.link}</p>}
               </div>
               <div>
                 <label htmlFor="pb-difficulty" className="mb-1 block text-xs font-semibold text-slate-600">
@@ -404,8 +455,9 @@ export default function TeacherProblemsPage() {
                 <select
                   id="pb-difficulty"
                   value={newProblem.difficulty}
+                  disabled={savingProblem}
                   onChange={(e) => setNewProblem({ ...newProblem, difficulty: e.target.value })}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-2.5 text-sm font-medium outline-none ring-amber-200 transition focus:border-amber-400 focus:bg-white focus:ring-2"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-2.5 text-sm font-medium outline-none ring-amber-200 transition focus:border-amber-400 focus:bg-white focus:ring-2 disabled:opacity-50"
                 >
                   <option value="EASY">Easy</option>
                   <option value="MEDIUM">Medium</option>
@@ -415,16 +467,29 @@ export default function TeacherProblemsPage() {
               <div className="flex justify-end gap-2 pt-2">
                 <button
                   type="button"
+                  disabled={savingProblem}
                   onClick={closeModal}
-                  className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                  className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-slate-800"
+                  disabled={savingProblem}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  Save
+                  {savingProblem ? (
+                    <>
+                      <span className="inline-flex gap-0.5">
+                        <span className="animate-bounce [animation-delay:0ms]">·</span>
+                        <span className="animate-bounce [animation-delay:150ms]">·</span>
+                        <span className="animate-bounce [animation-delay:300ms]">·</span>
+                      </span>
+                      Saving…
+                    </>
+                  ) : (
+                    "Save"
+                  )}
                 </button>
               </div>
             </form>
