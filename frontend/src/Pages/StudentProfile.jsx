@@ -43,20 +43,17 @@ function PlatformIcon({ platformName }) {
 }
 
 const PROFILE_DEFAULT = { name: "", email: "",  batch: "—" };
+const STATS_DEFAULT = { EASY: { solved: 0, total: 0 }, MEDIUM: { solved: 0, total: 0 }, HARD: { solved: 0, total: 0 } };
 
-const STATS = {
-  easy:   { solved: 84,  total: 120 },
-  medium: { solved: 156, total: 280 },
-  hard:   { solved: 42,  total: 95  },
-};
-
-function DonutChart({ totalSolved, totalProblems }) {
+function DonutChart({ stats }) {
   const r    = 48;
   const circ = 2 * Math.PI * r;
+  const totalSolved   = stats.EASY.solved + stats.MEDIUM.solved + stats.HARD.solved;
+  const totalProblems = stats.EASY.total  + stats.MEDIUM.total  + stats.HARD.total;
 
-  const easyLen   = (STATS.easy.solved   / totalProblems) * circ;
-  const medLen    = (STATS.medium.solved / totalProblems) * circ;
-  const hardLen   = (STATS.hard.solved   / totalProblems) * circ;
+  const easyLen  = totalProblems > 0 ? (stats.EASY.solved   / totalProblems) * circ : 0;
+  const medLen   = totalProblems > 0 ? (stats.MEDIUM.solved / totalProblems) * circ : 0;
+  const hardLen  = totalProblems > 0 ? (stats.HARD.solved   / totalProblems) * circ : 0;
 
   const segments = [
     { len: easyLen,  color: "#22c55e", offset: 0 },
@@ -100,6 +97,7 @@ export default function StudentProfile() {
 
   const [profile, setProfile]     = useState(PROFILE_DEFAULT);
   const [handles, setHandles]     = useState([]);
+  const [stats, setStats]         = useState(STATS_DEFAULT);
   const [editingId, setEditingId] = useState(null);
   const [editValue, setEditValue] = useState("");
   const [saving, setSaving]       = useState(false);
@@ -129,6 +127,9 @@ export default function StudentProfile() {
       axiosClient.get("/student/platform-handles")
         .then((res) => setHandles(res.data.handles))
         .catch(() => {});
+      axiosClient.get("/student/problem-stats")
+        .then((res) => { console.log("[problem-stats]", res.data); setStats(res.data.stats); })
+        .catch((err) => console.error("[problem-stats error]", err?.response?.status, err?.response?.data));
     }
   }, [teacherMode, studentId]);
 
@@ -167,9 +168,6 @@ export default function StudentProfile() {
       setSaving(false);
     }
   };
-
-  const totalSolved   = STATS.easy.solved + STATS.medium.solved + STATS.hard.solved;
-  const totalProblems = STATS.easy.total  + STATS.medium.total  + STATS.hard.total;
 
   const initials = profile.name
     .split(" ").map((p) => p[0]).join("").toUpperCase();
@@ -391,22 +389,22 @@ export default function StudentProfile() {
             Problems Solved
           </p>
           <div className="flex items-center justify-center gap-8">
-            <DonutChart totalSolved={totalSolved} totalProblems={totalProblems} />
+            <DonutChart stats={stats} />
 
             <div className="flex-1 space-y-3">
               {[
-                { label: "Easy",   dot: "bg-green-500", text: "text-green-600", ...STATS.easy   },
-                { label: "Medium", dot: "bg-amber-400",  text: "text-amber-600",  ...STATS.medium },
-                { label: "Hard",   dot: "bg-red-500",   text: "text-red-600",   ...STATS.hard   },
-              ].map(({ label, dot, text, solved, total }) => (
+                { label: "Easy",   key: "EASY",   dot: "bg-green-500", text: "text-green-600" },
+                { label: "Medium", key: "MEDIUM", dot: "bg-amber-400",  text: "text-amber-600" },
+                { label: "Hard",   key: "HARD",   dot: "bg-red-500",   text: "text-red-600"  },
+              ].map(({ label, key, dot, text }) => (
                 <div key={label} className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className={`h-2.5 w-2.5 rounded-full ${dot}`} />
                     <span className={`text-sm font-semibold ${text}`}>{label}</span>
                   </div>
                   <span className="text-sm tabular-nums text-gray-600">
-                    {solved}
-                    <span className="text-gray-400"> / {total}</span>
+                    {stats[key].solved}
+                    <span className="text-gray-400"> / {stats[key].total}</span>
                   </span>
                 </div>
               ))}
