@@ -6,6 +6,7 @@
   "scripts": {
     "start": "tsx src/index.js",
     "dev": "set NODE_ENV=development&&nodemon --exec tsx src/index.js",
+    "build": "node --check src/index.js src/controllers/*.js src/routes/*.js src/middlewares/*.js src/db/*.js src/utils/*.js src/utils/checkers/*.js",
     "db:seed": "tsx prisma/seed.js"
   },
   "prisma": {
