@@ -20,7 +20,8 @@ const rankBadge = (rank) => {
 };
 
 export default function TableWeekly() {
-  const { id: batchId } = useParams();
+  const { id, batchId: batchIdParam } = useParams();
+  const batchId = id ?? batchIdParam;
   const [weeks, setWeeks]       = useState([]);
   const [students, setStudents] = useState([]);
   const [loading, setLoading]   = useState(true);

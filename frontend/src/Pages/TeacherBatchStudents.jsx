@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Search, Flame, User } from "lucide-react";
+import { Search, User } from "lucide-react";
 import axiosClient from "../utils/axiosClient";
 
 const initials = (name = "") =>
@@ -71,9 +71,6 @@ export default function TeacherBatchStudents() {
                 Roll No.
               </th>
               <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-slate-600">
-                Streak
-              </th>
-              <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-slate-600">
                 Solved
               </th>
               <th className="px-4 py-3" />
@@ -110,14 +107,6 @@ export default function TeacherBatchStudents() {
                   {/* Roll */}
                   <td className="px-4 py-3 text-slate-500 text-xs font-medium">
                     {s.studentEnrollmentId || "—"}
-                  </td>
-
-                  {/* Streak */}
-                  <td className="px-4 py-3 text-center">
-                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-orange-600">
-                      <Flame className="h-3.5 w-3.5" />
-                      {s.studentStreak ?? 0}
-                    </span>
                   </td>
 
                   {/* Solved */}

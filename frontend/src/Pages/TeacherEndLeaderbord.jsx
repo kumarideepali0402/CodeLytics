@@ -50,7 +50,8 @@ function Podium({ title, data }) {
 
 /* ── Main ────────────────────────────────────────────────────────────────── */
 export default function LeaderboardDashboard() {
-  const { id: batchId } = useParams();
+  const { id, batchId: batchIdParam } = useParams();
+  const batchId = id ?? batchIdParam;
   const [active, setActive] = useState("weekly");
   const [weeklyTop3, setWeeklyTop3]     = useState([]);
   const [allTimeTop3, setAllTimeTop3]   = useState([]);
@@ -85,8 +86,7 @@ export default function LeaderboardDashboard() {
               totalSolves: sorted.reduce((sum, s) => sum + s.solved, 0),
             };
           })
-          .filter((w) => w.totalSolves > 0)
-          .slice(-5);
+          .filter((w) => w.totalSolves > 0);
 
         setWeeklyHistory(history);
         setWeeklyTop3(history[history.length - 1]?.data ?? []);

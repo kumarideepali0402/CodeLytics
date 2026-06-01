@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Mail, Flame, ExternalLink, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Mail, ExternalLink, CheckCircle2 } from "lucide-react";
 import axiosClient from "../utils/axiosClient";
 
 const PLATFORM_META = {
@@ -105,12 +105,6 @@ export default function TeacherStudentProfile() {
           <div className="px-6 py-4 text-center">
             <p className="text-2xl font-extrabold text-teal-700">{student.solvedCount}</p>
             <p className="text-xs text-slate-400 mt-0.5">Problems Solved</p>
-          </div>
-          <div className="px-6 py-4 text-center">
-            <p className="text-2xl font-extrabold text-orange-500 flex items-center justify-center gap-1">
-              <Flame className="h-5 w-5" />{student.studentStreak ?? 0}
-            </p>
-            <p className="text-xs text-slate-400 mt-0.5">Day Streak</p>
           </div>
         </div>
       </div>

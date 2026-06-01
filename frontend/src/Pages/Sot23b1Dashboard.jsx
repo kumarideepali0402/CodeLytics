@@ -1,143 +1,480 @@
 
-
-
-import { Trophy, Activity } from "lucide-react";
-import { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
-
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { Card, CardContent } from "@/Components/ui/card";
+import {
+  Activity,
+  Users,
+  ListChecks,
+  BarChart3,
+  Target,
+  CheckCircle2,
+  School,
+} from "lucide-react";
+import {
+  PieChart,
+  Pie,
+  Cell,
+  RadarChart,
+  PolarGrid,
+  PolarAngleAxis,
+  Radar,
+  AreaChart,
+  Area,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts";
+import { motion } from "framer-motion";
 import axiosClient from "../utils/axiosClient";
 
+const DIFFICULTY_COLORS = ["#22c55e", "#f59e0b", "#ef4444"];
+
+const FadeInSection = ({ children }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 40 }}
+    whileInView={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.7, ease: "easeOut" }}
+    viewport={{ once: true, amount: 0.2 }}
+  >
+    {children}
+  </motion.div>
+);
+
+function computeMedian(arr) {
+  if (!arr.length) return 0;
+  const sorted = [...arr].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[mid] : Math.round((sorted[mid - 1] + sorted[mid]) / 2);
+}
+
 export default function Dashboard() {
+  const { batchId } = useParams();
+  const [loading, setLoading] = useState(true);
 
-  const [studentCount, setStudentCount] = useState(0);
-  const [teacherCount, setTeacherCount] = useState(0);
+  const [kpis, setKpis] = useState({
+    totalStudents: 0,
+    totalTeachers: 0,
+    totalAssigned: 0,
+    avgSolved: 0,
+    medianSolved: 0,
+    completionRate: 0,
+  });
+  const [difficultyData, setDifficultyData] = useState([]);
+  const [topicData, setTopicData] = useState([]);
+  const [monthlyPerfData, setMonthlyPerfData] = useState([]);
+  const [monthlyWeeklyMap, setMonthlyWeeklyMap] = useState({});
+  const [selectedPerfMonth, setSelectedPerfMonth] = useState(null);
+  const [monthlyRetentionData, setMonthlyRetentionData] = useState([]);
+  const [monthlyRetentionWeekMap, setMonthlyRetentionWeekMap] = useState({});
+  const [selectedRetentionMonth, setSelectedRetentionMonth] = useState(null);
 
-    const {batchId} = useParams();
+  useEffect(() => {
+    if (!batchId) return;
+    setLoading(true);
 
-    useEffect(()=>{
-      const fetchBatchStudent = async() => {
-        const res = await axiosClient.get(`/student/get/${batchId}`);
-        const students = res.data?.students ?? [];
-        setStudentCount(students.length);
-      } 
-       const fetchBatchTeacher = async() => {
-        const res = await axiosClient.get(`/batch/get/${batchId}/teachers`);
-        const teachers = res.data?.teachers ??[];
-        setTeacherCount(teachers.length);
-      } 
-      Promise.all([fetchBatchStudent(),fetchBatchTeacher()])
-     
-    }, [batchId])
-    const activeStudents = [
-    { name: "Active", value: 70 },
-    { name: "Inactive", value: 30 },
-  ];
-  const topPerformers = [
-    { rank: 1, name: "Deepali", solved: 340, total: 500 },
-    { rank: 2, name: "Alice", solved: 320, total: 500 },
-    { rank: 3, name: "Bob", solved: 300, total: 500 },
-  ];
+    const fetchAll = async () => {
+      try {
+        const [teachersRes, studentsRes, weeklyRes, statusRes] = await Promise.all([
+          axiosClient.get(`/batch/get/${batchId}/teachers`),
+          axiosClient.get(`/analytics/batch/${batchId}/students`),
+          axiosClient.get(`/analytics/batch/${batchId}/weekly-progress`),
+          axiosClient.get(`/analytics/batch/${batchId}/solve-status`),
+        ]);
 
-  const retentionData = [
-    { week: 'Week 1', active: 45, dropped: 0 },
-    { week: 'Week 2', active: 44, dropped: 1 },
-    { week: 'Week 3', active: 42, dropped: 3 },
-    { week: 'Week 4', active: 41, dropped: 4 },
-    { week: 'Week 5', active: 39, dropped: 6 },
-    { week: 'Week 6', active: 38, dropped: 7 },
-    { week: 'Week 7', active: 38, dropped: 7 },
-    { week: 'Week 8', active: 37, dropped: 8 }
+        const teachers = teachersRes.data?.teachers ?? [];
+        const students = studentsRes.data?.students ?? [];
+        const weeks = weeklyRes.data?.weeks ?? [];
+        const wStudents = weeklyRes.data?.students ?? [];
+        const problems = statusRes.data?.problems ?? [];
+        const statuses = statusRes.data?.statuses ?? {};
+        const statusStudents = statusRes.data?.students ?? [];
+
+        // KPIs
+        const solvedCounts = students.map((s) => s.solvedCount ?? 0);
+        const totalAssigned = students[0]?.totalAssigned ?? 0;
+        const avgSolved = students.length
+          ? +(solvedCounts.reduce((a, b) => a + b, 0) / students.length).toFixed(1)
+          : 0;
+        const completionRate = totalAssigned
+          ? Math.round((avgSolved / totalAssigned) * 100)
+          : 0;
+        setKpis({
+          totalStudents: students.length,
+          totalTeachers: teachers.length,
+          totalAssigned,
+          avgSolved,
+          medianSolved: computeMedian(solvedCounts),
+          completionRate,
+        });
+
+        // Difficulty breakdown
+        const diffOrder = [
+          { key: "EASY", label: "Easy" },
+          { key: "MEDIUM", label: "Medium" },
+          { key: "HARD", label: "Hard" },
+        ];
+        setDifficultyData(
+          diffOrder
+            .map(({ key, label }) => {
+              const diffProbs = problems.filter((p) => p.difficulty === key);
+              const totalSolves = statusStudents.reduce(
+                (acc, student) =>
+                  acc +
+                  diffProbs.filter(
+                    (p) => statuses[`${p.assignmentId}_${student.id}`] === "SOLVED"
+                  ).length,
+                0
+              );
+              return {
+                name: label,
+                solved: statusStudents.length
+                  ? +(totalSolves / statusStudents.length).toFixed(1)
+                  : 0,
+                total: diffProbs.length,
+              };
+            })
+            .filter((d) => d.total > 0)
+        );
+
+        // Topic breakdown
+        const topics = [...new Set(problems.map((p) => p.topic).filter(Boolean))];
+        setTopicData(
+          topics.map((topic) => {
+            const topicProbs = problems.filter((p) => p.topic === topic);
+            const maxPossible = topicProbs.length * statusStudents.length;
+            const totalSolves = statusStudents.reduce(
+              (acc, student) =>
+                acc +
+                topicProbs.filter(
+                  (p) => statuses[`${p.assignmentId}_${student.id}`] === "SOLVED"
+                ).length,
+              0
+            );
+            return {
+              topic,
+              percent: maxPossible > 0 ? Math.round((totalSolves / maxPossible) * 100) : 0,
+            };
+          })
+        );
+
+        // Monthly performance + weekly drill-down
+        const monthGroups = {};
+        weeks.forEach((week, i) => {
+          const d = new Date(week.weekStart);
+          const key =
+            d.toLocaleString("default", { month: "short" }) + " " + d.getFullYear();
+          if (!monthGroups[key]) monthGroups[key] = [];
+          monthGroups[key].push(i);
+        });
+
+        setMonthlyPerfData(
+          Object.entries(monthGroups).map(([month, indices]) => {
+            const totalSolved = indices.reduce(
+              (acc, i) =>
+                acc + wStudents.reduce((s, st) => s + (st.weeklySolved[i] ?? 0), 0),
+              0
+            );
+            return {
+              month,
+              avgSolved: wStudents.length
+                ? +(totalSolved / wStudents.length).toFixed(1)
+                : 0,
+            };
+          })
+        );
+
+        const weekMap = {};
+        Object.entries(monthGroups).forEach(([month, indices]) => {
+          weekMap[month] = indices.map((i) => ({
+            week: weeks[i].label,
+            avgSolved: wStudents.length
+              ? +(
+                  wStudents.reduce((acc, st) => acc + (st.weeklySolved[i] ?? 0), 0) /
+                  wStudents.length
+                ).toFixed(1)
+              : 0,
+          }));
+        });
+        setMonthlyWeeklyMap(weekMap);
+
+        // Retention
+        setMonthlyRetentionData(
+          Object.entries(monthGroups).map(([month, indices]) => {
+            const totalActive = indices.reduce(
+              (acc, i) =>
+                acc + wStudents.filter((s) => (s.weeklySolved[i] ?? 0) > 0).length,
+              0
+            );
+            const avgActive = indices.length ? Math.round(totalActive / indices.length) : 0;
+            return {
+              month,
+              active: avgActive,
+              inactive: Math.max(0, wStudents.length - avgActive),
+            };
+          })
+        );
+
+        const retentionWeekMap = {};
+        Object.entries(monthGroups).forEach(([month, indices]) => {
+          retentionWeekMap[month] = indices.map((i) => {
+            const active = wStudents.filter((s) => (s.weeklySolved[i] ?? 0) > 0).length;
+            return {
+              week: weeks[i].label,
+              active,
+              inactive: Math.max(0, wStudents.length - active),
+            };
+          });
+        });
+        setMonthlyRetentionWeekMap(retentionWeekMap);
+      } catch (err) {
+        console.error("[Dashboard] fetch error", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAll();
+  }, [batchId]);
+
+  const retentionChartData = selectedRetentionMonth
+    ? (monthlyRetentionWeekMap[selectedRetentionMonth] ?? [])
+    : monthlyRetentionData;
+
+  const perfChartData = selectedPerfMonth
+    ? (monthlyWeeklyMap[selectedPerfMonth] ?? [])
+    : monthlyPerfData;
+
+  const totalProblemsForDonut = difficultyData.reduce((acc, d) => acc + d.total, 0);
+
+  const kpiCards = [
+    { icon: Users,        value: kpis.totalStudents,          label: "Total Students",    color: "text-indigo-500" },
+    { icon: School,       value: kpis.totalTeachers,          label: "Total Teachers",    color: "text-teal-500"   },
+    { icon: ListChecks,   value: kpis.totalAssigned,          label: "Total Assigned",    color: "text-yellow-500" },
+    { icon: BarChart3,    value: kpis.avgSolved,              label: "Avg Solved",        color: "text-blue-500"   },
+    { icon: Target,       value: kpis.medianSolved,           label: "Median Solved",     color: "text-purple-500" },
+    { icon: CheckCircle2, value: kpis.completionRate + "%",   label: "Completion Rate",   color: "text-green-600"  },
   ];
 
   return (
     <div className="w-full space-y-6">
-      {/* KPI Section */}
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-5">
-        {[{ label: "Students", value: studentCount }, { label: "Teachers", value: teacherCount }, { label: "Questions Assigned", value: "500" }, { label: "Topics Covered", value: "8" }, { label: "Active Students", value: "60%" }]
-          .map((item, idx) => (
-          <div
-            key={idx}
-            className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm ring-1 ring-slate-100 transition hover:shadow-md sm:p-5"
-          >
-            <div className="text-xs font-medium tracking-tight text-slate-500 sm:text-sm">{item.label}</div>
-            <div className="mt-1.5 text-2xl font-bold tabular-nums text-slate-900 sm:text-3xl">{item.value}</div>
-          </div>
+
+      {/* KPI Cards — same style as Visual.jsx */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+        {kpiCards.map((stat, i) => (
+          <FadeInSection key={i}>
+            <Card className="bg-white rounded-2xl shadow-md">
+              <CardContent className="flex items-center justify-between p-3">
+                <div>
+                  <h2 className="text-lg font-bold text-black">
+                    {loading ? "—" : stat.value}
+                  </h2>
+                  <p className="text-xs text-gray-600">{stat.label}</p>
+                </div>
+                <stat.icon className={`w-6 h-6 ${stat.color}`} />
+              </CardContent>
+            </Card>
+          </FadeInSection>
         ))}
       </div>
 
-      {/* Problem Solving Stats */}
-      <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm ring-1 ring-slate-100 sm:p-6">
-        <h2 className="mb-4 text-base font-semibold text-slate-900">Problem Solving Stats</h2>
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <div className="flex flex-col items-center rounded-2xl bg-sky-50/90 p-6 ring-1 ring-sky-100">
-            <div className="text-4xl font-bold text-sky-700">100</div>
-            <div className="mt-2 text-sm text-slate-600">Median Problems Solved</div>
-          </div>
-          <div className="flex flex-col items-center rounded-2xl bg-sky-50/90 p-6 ring-1 ring-sky-100">
-            <div className="text-4xl font-bold text-sky-700">100</div>
-            <div className="mt-2 text-sm text-slate-600">Avg. Problems Solved</div>
-          </div>
-        </div>
-      </div>
+      {/* Donut + Radar */}
+      <FadeInSection>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-      {/* Top Performers */}
-      <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm ring-1 ring-slate-100 sm:p-6">
-        <div className="mb-4 flex items-center justify-between">
+          {/* Donut Chart */}
+          <Card className="bg-white rounded-2xl shadow-lg">
+            <CardContent className="flex flex-col p-6 items-center">
+              <h2 className="text-center font-semibold text-lg mb-4 text-black">
+                Difficulty-wise Problems Assigned to Batch
+              </h2>
+              <div className="relative flex justify-center items-center w-full">
+                <ResponsiveContainer width="100%" height={280}>
+                  <PieChart>
+                    <Pie
+                      data={difficultyData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={70}
+                      outerRadius={100}
+                      paddingAngle={3}
+                      dataKey="total"
+                    >
+                      {difficultyData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={DIFFICULTY_COLORS[index % DIFFICULTY_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value, name) => [`${value} problems`, name]} />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="absolute text-center">
+                  <h2 className="text-2xl font-bold text-black">{totalProblemsForDonut}</h2>
+                  <p className="text-sm text-gray-600">Total Problems</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-4 w-full mt-4">
+                {difficultyData.map((d, i) => (
+                  <div
+                    key={d.name}
+                    className={`p-3 rounded-lg shadow-sm text-center ${
+                      i === 0 ? "bg-green-100" : i === 1 ? "bg-orange-100" : "bg-red-100"
+                    }`}
+                  >
+                    <h2 className={`text-lg font-bold ${
+                      i === 0 ? "text-green-700" : i === 1 ? "text-orange-700" : "text-red-700"
+                    }`}>
+                      {d.total}
+                    </h2>
+                    <p className={`text-sm ${
+                      i === 0 ? "text-green-600" : i === 1 ? "text-orange-600" : "text-red-600"
+                    }`}>
+                      {d.name}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Radar Chart */}
+          <Card className="bg-white rounded-2xl shadow-lg">
+            <CardContent className="p-4">
+              <h2 className="font-semibold mb-4 text-center text-black">
+                Avg. % Problems Solved by Topic
+              </h2>
+              <ResponsiveContainer width="100%" height={350}>
+                <RadarChart cx="50%" cy="50%" outerRadius={140} data={topicData}>
+                  <PolarGrid />
+                  <PolarAngleAxis dataKey="topic" stroke="black" />
+                  <Radar
+                    name="Batch"
+                    dataKey="percent"
+                    stroke="#3b82f6"
+                    fill="#3b82f6"
+                    fillOpacity={0.6}
+                  />
+                  <Tooltip />
+                </RadarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </div>
+      </FadeInSection>
+
+      {/* Retention Chart with drill-down */}
+      <Card className="bg-white rounded-2xl shadow p-6">
+        <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <Trophy className="h-5 w-5 shrink-0 text-amber-500" aria-hidden />
-            <h2 className="font-semibold text-slate-900">Top Performers</h2>
+            <Activity className="w-5 h-5 text-blue-500" />
+            <h3 className="text-lg font-semibold text-black">
+              {selectedRetentionMonth
+                ? `Active vs Not Active — ${selectedRetentionMonth} (Weekly)`
+                : "Student Activity Retention (Monthly)"}
+            </h3>
           </div>
-          <button type="button" className="text-sm font-medium text-sky-700 hover:underline">
-            See All
-          </button>
-        </div>
-        <div className="space-y-2">
-          {topPerformers.map((performer, index) => (
-            <div
-              key={index}
-              className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 p-3 transition hover:bg-slate-100/80"
+          {selectedRetentionMonth && (
+            <button
+              onClick={() => setSelectedRetentionMonth(null)}
+              className="px-3 py-1 bg-gray-200 text-sm rounded-lg"
             >
-              <div className="flex h-8 min-w-8 items-center justify-center rounded-full bg-slate-200/90 text-sm font-bold text-slate-800">
-                {performer.rank}
-              </div>
-              <div className="min-w-0 flex-1 font-medium text-slate-800">{performer.name}</div>
-              <div className="shrink-0 text-sm tabular-nums text-slate-600">
-                {performer.solved}/{performer.total} problems
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Retention / Drop-off Curve */}
-      <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm ring-1 ring-slate-100 sm:p-6">
-        <div className="mb-4 flex items-center gap-2">
-          <Activity className="h-5 w-5 shrink-0 text-emerald-600" aria-hidden />
-          <h3 className="text-base font-semibold text-slate-900">Retention / Drop-off Curve</h3>
+              ← Back
+            </button>
+          )}
         </div>
         <ResponsiveContainer width="100%" height={300}>
-          <AreaChart data={retentionData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="week" />
-            <YAxis />
+          <AreaChart
+            data={retentionChartData}
+            margin={{ top: 10, right: 20, left: 0, bottom: 0 }}
+            onClick={(e) => {
+              if (!selectedRetentionMonth && e?.activeLabel)
+                setSelectedRetentionMonth(e.activeLabel);
+            }}
+            style={{ cursor: selectedRetentionMonth ? "default" : "pointer" }}
+          >
+            <CartesianGrid stroke="#e5e7eb" />
+            <XAxis dataKey={selectedRetentionMonth ? "week" : "month"} stroke="black" />
+            <YAxis stroke="black" />
             <Tooltip />
-            <Area type="monotone" dataKey="active" stroke="#10b981" fill="#10b981" fillOpacity={0.6} />
-            <Area type="monotone" dataKey="dropped" stroke="#ef4444" fill="#ef4444" fillOpacity={0.3} />
+            <Area type="monotone" dataKey="active"   stroke="#2563eb" fill="#2563eb" fillOpacity={0.4} name="Active Students" />
+            <Area type="monotone" dataKey="inactive" stroke="#6b7280" fill="#9ca3af" fillOpacity={0.3} name="Not Active" />
           </AreaChart>
         </ResponsiveContainer>
-        <div className="mt-4 flex flex-wrap items-center gap-4">
-          <div className="flex items-center gap-2">
-            <div className="h-3 w-3 rounded-full bg-emerald-500" />
-            <span className="text-sm text-slate-600">Active Students</span>
+        <div className="flex items-center justify-between mt-4">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 bg-blue-600 rounded-full" />
+              <span className="text-sm text-black">Active Students</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 bg-gray-500 rounded-full" />
+              <span className="text-sm text-black">Not Active</span>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="h-3 w-3 rounded-full bg-red-500" />
-            <span className="text-sm text-slate-600">Dropped Out</span>
-          </div>
+          {!selectedRetentionMonth && (
+            <p className="text-xs text-gray-400">Click a month to see weekly breakdown</p>
+          )}
         </div>
-      </div>
+      </Card>
+
+      {/* Avg Problems Solved — Monthly / Weekly Drill-down */}
+      <FadeInSection>
+        <Card className="bg-white rounded-2xl shadow-lg">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-semibold text-black">
+                {selectedPerfMonth
+                  ? `Avg Problems Solved — ${selectedPerfMonth} (Weekly)`
+                  : "Avg Problems Solved per Month"}
+              </h2>
+              {selectedPerfMonth && (
+                <button
+                  onClick={() => setSelectedPerfMonth(null)}
+                  className="px-3 py-1 bg-green-400 text-sm rounded-lg shrink-0"
+                >
+                  ← Back
+                </button>
+              )}
+            </div>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart
+                data={perfChartData}
+                margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+                onClick={(e) => {
+                  if (!selectedPerfMonth && e?.activeLabel)
+                    setSelectedPerfMonth(e.activeLabel);
+                }}
+                style={{ cursor: selectedPerfMonth ? "default" : "pointer" }}
+              >
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey={selectedPerfMonth ? "week" : "month"} stroke="black" />
+                <YAxis stroke="black" />
+                <Tooltip formatter={(v) => [`${v}`, "Avg Problems Solved"]} />
+                <Legend />
+                <Line
+                  type="monotone"
+                  dataKey="avgSolved"
+                  stroke="#f59e0b"
+                  strokeWidth={3}
+                  dot={{ r: 5 }}
+                  activeDot={{ r: 7 }}
+                  name="Avg Problems Solved"
+                />
+              </LineChart>
+            </ResponsiveContainer>
+            {!selectedPerfMonth && (
+              <p className="text-xs text-gray-400 mt-2 text-center">
+                Click a month to see weekly breakdown
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      </FadeInSection>
+
     </div>
   );
 }
-

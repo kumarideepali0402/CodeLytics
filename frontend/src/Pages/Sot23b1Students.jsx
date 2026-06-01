@@ -88,7 +88,7 @@ export default function Students() {
         <table className="min-w-full border-collapse">
           <thead className="bg-slate-800 text-white">
             <tr>
-              <th className="px-6 py-3 text-left text-sm font-semibold">ID</th>
+              <th className="px-6 py-3 text-left text-sm font-semibold">Roll No.</th>
               <th className="px-6 py-3 text-left text-sm font-semibold">Name</th>
               <th className="px-6 py-3 text-left text-sm font-semibold">Email</th>
               <th className="px-6 py-3 text-center text-sm font-semibold">
@@ -104,7 +104,7 @@ export default function Students() {
             {students.map((student, index) => (
               <tr className="transition hover:bg-sky-50/50" key={student.id}>
                 <td className="px-6 py-4 text-sm text-gray-700 font-medium">
-                  {student.id}
+                  {student.studentEnrollmentId || "—"}
                 </td>
                 <td className="px-6 py-4 text-sm text-gray-700">
                   {student.name}
@@ -158,63 +158,72 @@ export default function Students() {
               >
                 <h3 className="text-lg font-semibold mb-4">Add New Student</h3>
 
-                <form onSubmit={handleAddStudent}>
-                  
+                <form onSubmit={handleAddStudent} autoComplete="off">
 
-                  <input
-                    type="text"
-                    placeholder="Name"
-                    value={newStudent.name}
-                    onChange={(e) =>
-                      setNewStudent({ ...newStudent, name: e.target.value })
-                    }
-                    className="w-full px-3 py-2 mb-2 rounded-lg border"
-                    required
-                  />
-                  <input
-                    type="text"
-                    placeholder="Roll / Enrollment ID"
-                    value={newStudent.studentEnrollmentId}
-                    onChange={(e) =>
-                      setNewStudent({ ...newStudent, studentEnrollmentId: e.target.value })
-                    }
-                    className="w-full px-3 py-2 mb-2 rounded-lg border"
-                  />
+                  <div className="space-y-3 mb-5">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 mb-1">Name <span className="text-red-400">*</span></label>
+                      <input
+                        type="text"
+                        placeholder="Full name"
+                        value={newStudent.name}
+                        onChange={(e) => setNewStudent({ ...newStudent, name: e.target.value })}
+                        autoComplete="off"
+                        className="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-800 placeholder-slate-400 outline-none transition focus:border-sky-400 focus:bg-white focus:ring-2 focus:ring-sky-100"
+                        required
+                      />
+                    </div>
 
-                  <input
-                    type="email"
-                    placeholder="Email"
-                    value={newStudent.email}
-                    onChange={(e) =>
-                      setNewStudent({ ...newStudent, email: e.target.value })
-                    }
-                    className="w-full px-3 py-2 mb-2 rounded-lg border"
-                    required
-                  />
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 mb-1">Roll / Enrollment ID</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. 2023CSE042"
+                        value={newStudent.studentEnrollmentId}
+                        onChange={(e) => setNewStudent({ ...newStudent, studentEnrollmentId: e.target.value })}
+                        autoComplete="off"
+                        className="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-800 placeholder-slate-400 outline-none transition focus:border-sky-400 focus:bg-white focus:ring-2 focus:ring-sky-100"
+                      />
+                    </div>
 
-                  <input
-                    type="password"
-                    placeholder="password"
-                    value={newStudent.password}
-                    onChange={(e) =>
-                      setNewStudent({ ...newStudent, password: e.target.value })
-                    }
-                    className="w-full px-3 py-2 mb-2 rounded-lg border"
-                    required
-                  />
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 mb-1">Email <span className="text-red-400">*</span></label>
+                      <input
+                        type="email"
+                        placeholder="student@example.com"
+                        value={newStudent.email}
+                        onChange={(e) => setNewStudent({ ...newStudent, email: e.target.value })}
+                        autoComplete="off"
+                        className="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-800 placeholder-slate-400 outline-none transition focus:border-sky-400 focus:bg-white focus:ring-2 focus:ring-sky-100"
+                        required
+                      />
+                    </div>
 
-                  <div className="flex justify-end gap-1.5 px-3 py-2">
-                    {/* Cancel button same theme as View */}
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 mb-1">Password <span className="text-red-400">*</span></label>
+                      <input
+                        type="password"
+                        placeholder="Set a password"
+                        value={newStudent.password}
+                        onChange={(e) => setNewStudent({ ...newStudent, password: e.target.value })}
+                        autoComplete="new-password"
+                        className="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-800 placeholder-slate-400 outline-none transition focus:border-sky-400 focus:bg-white focus:ring-2 focus:ring-sky-100"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-2">
                     <button
                       type="button"
                       onClick={() => setIsModalOpen(false)}
-                      className="px-4 py-2 rounded-lg bg-gray-300 hover:bg-gray-400 transition"
+                      className="px-4 py-2 rounded-xl text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 transition"
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
-                      className="px-4 py-2 rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition"
+                      className="px-4 py-2 rounded-xl text-sm font-semibold text-white bg-sky-600 hover:bg-sky-700 transition shadow-sm"
                     >
                       Add Student
                     </button>

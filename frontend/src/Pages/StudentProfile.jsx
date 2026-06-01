@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
-import { Mail, Flame, ExternalLink, Pencil, Check, X, Users, ArrowLeft, User, CheckCircle2 } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { Mail, ExternalLink, Pencil, Check, X, Users, ArrowLeft, User, CheckCircle2 } from "lucide-react";
+import ReadonlyAssignmentSheet from "../Components/ReadonlyAssignmentSheet";
 import { useNavigate, useParams } from "react-router-dom";
 import axiosClient from "../utils/axiosClient";
 import { handleError } from "../utils/notification";
@@ -104,22 +105,34 @@ export default function StudentProfile() {
   const [syncToken, setSyncToken] = useState("");
   const [copied, setCopied]       = useState(false);
 
+  // Teacher/college view extras
+  const [assignments, setAssignments] = useState([]);   // [{assignmentId, title, link, difficulty, topic, subtopic}]
+  const [statuses, setStatuses]       = useState({});   // { assignmentId_studentId: "SOLVED"|other }
+  const [loadingProfile, setLoadingProfile] = useState(false);
+
   useEffect(() => {
     if (teacherMode) {
-      axiosClient.get(`/analytics/student/${studentId}/profile`)
-        .then((res) => {
-          const s = res.data.student;
+      setLoadingProfile(true);
+      Promise.all([
+        axiosClient.get(`/analytics/student/${studentId}/profile`),
+        axiosClient.get(`/analytics/batch/${batchId}/solve-status`),
+      ])
+        .then(([profileRes, statusRes]) => {
+          const s = profileRes.data.student;
           setProfile({ name: s.name, email: s.email, batch: s.studentEnrollmentId || "—" });
           setHandles(
             (s.platformAccounts ?? []).map((acc) => ({
-              platformId:    acc.id,
-              platformName:  acc.platform?.name ?? "",
-              handle:        acc.handle ?? "",
-              lastSyncedAt:  acc.lastSyncedAt ?? null,
+              platformId:   acc.id,
+              platformName: acc.platform?.name ?? "",
+              handle:       acc.handle ?? "",
+              lastSyncedAt: acc.lastSyncedAt ?? null,
             }))
           );
+          setAssignments(statusRes.data.problems ?? []);
+          setStatuses(statusRes.data.statuses ?? {});
         })
-        .catch(() => {});
+        .catch(() => {})
+        .finally(() => setLoadingProfile(false));
     } else {
       axiosClient.get("/student/me")
         .then((res) => setProfile(res.data.profile))
@@ -131,7 +144,19 @@ export default function StudentProfile() {
         .then((res) => { console.log("[problem-stats]", res.data); setStats(res.data.stats); })
         .catch((err) => console.error("[problem-stats error]", err?.response?.status, err?.response?.data));
     }
-  }, [teacherMode, studentId]);
+  }, [teacherMode, studentId, batchId]);
+
+  // Computed for teacher/college view — must be at top level (Rules of Hooks)
+  const diffStats = useMemo(() => {
+    const map = { EASY: { solved: 0, total: 0 }, MEDIUM: { solved: 0, total: 0 }, HARD: { solved: 0, total: 0 } };
+    assignments.forEach((p) => {
+      const d = p.difficulty;
+      if (!map[d]) return;
+      map[d].total++;
+      if (statuses[`${p.assignmentId}_${studentId}`] === "SOLVED") map[d].solved++;
+    });
+    return map;
+  }, [assignments, statuses, studentId]);
 
   const generateToken = async() => {
     try {
@@ -172,12 +197,24 @@ export default function StudentProfile() {
   const initials = profile.name
     .split(" ").map((p) => p[0]).join("").toUpperCase();
 
-  /* ── Teacher view ── */
+  /* ── Teacher / College view ── */
   if (teacherMode) {
-    const ini  = profile.name.split(" ").map((p) => p[0]).join("").slice(0, 2).toUpperCase();
-    const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "Never";
+    const ini     = profile.name.split(" ").map((p) => p[0]).join("").slice(0, 2).toUpperCase();
+    const fmtDate = (iso) => iso
+      ? new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })
+      : "Never";
+
+    const totalSolved = Object.values(diffStats).reduce((a, d) => a + d.solved, 0);
+    const totalAssigned = assignments.length;
+
+    const diffRows = [
+      { key: "EASY",   label: "Easy",   dot: "bg-green-500", text: "text-green-700", bg: "bg-green-50"  },
+      { key: "MEDIUM", label: "Medium", dot: "bg-amber-400",  text: "text-amber-700", bg: "bg-amber-50"  },
+      { key: "HARD",   label: "Hard",   dot: "bg-red-500",   text: "text-red-700",   bg: "bg-red-50"    },
+    ];
+
     return (
-      <div className="space-y-4 max-w-xl mx-auto">
+      <div className="space-y-5 max-w-4xl mx-auto">
         {/* Back */}
         <button
           onClick={() => navigate(backPath)}
@@ -186,76 +223,107 @@ export default function StudentProfile() {
           <ArrowLeft className="h-4 w-4" /> Back to students
         </button>
 
-        {/* Identity card */}
-        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-          <div className="bg-slate-50 border-b border-slate-100 px-6 py-5 flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-orange-100 text-orange-600 flex items-center justify-center text-xl font-bold shrink-0">
-              {ini || <User className="h-7 w-7" />}
-            </div>
-            <div>
-              <h2 className="text-lg font-bold text-slate-900">{profile.name || "—"}</h2>
-              <div className="flex flex-wrap gap-2 mt-1">
-                <span className="inline-flex items-center gap-1 text-xs text-slate-500 bg-white border border-slate-200 rounded-lg px-2 py-0.5">
-                  <Mail className="h-3 w-3" /> {profile.email || "—"}
-                </span>
-                {profile.batch && profile.batch !== "—" && (
-                  <span className="text-xs text-slate-600 bg-white border border-slate-200 rounded-lg px-2 py-0.5 font-medium">
-                    {profile.batch}
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
+        {loadingProfile ? (
+          <p className="text-sm text-slate-400 py-10 text-center">Loading…</p>
+        ) : (
+          <>
+            {/* ── Identity + Handles · Problems — single row card ── */}
+            <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+              <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-slate-100">
 
-        {/* Platform handles */}
-        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-          <div className="px-5 py-3 border-b border-slate-100 bg-slate-50">
-            <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500">Platform Handles</h3>
-          </div>
-          <div className="divide-y divide-slate-100">
-            {handles.length === 0 ? (
-              <p className="px-5 py-4 text-sm text-slate-400">No platform handles added.</p>
-            ) : handles.map((h) => {
-              const metaKey = Object.keys(PLATFORM_META).find((k) => h.platformName.toLowerCase().includes(k));
-              const meta    = metaKey ? PLATFORM_META[metaKey] : null;
-              const url     = getPlatformUrl(h.platformName, h.handle);
-              return (
-                <div key={h.platformId} className="flex items-center gap-3 px-5 py-3">
-                  {meta ? (
-                    <img src={meta.favicon} alt={meta.label} className="h-5 w-5 rounded object-contain" />
-                  ) : (
-                    <div className="h-5 w-5 rounded bg-slate-100 flex items-center justify-center text-[9px] font-bold text-slate-500">
-                      {(h.platformName || "?")[0].toUpperCase()}
-                    </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold text-slate-700">{meta?.label ?? h.platformName}</p>
-                    <p className="text-xs text-slate-400 truncate">
-                      {h.handle || <span className="italic">Not set</span>}
-                    </p>
+                {/* Left: Identity + Platform Handles */}
+                <div className="flex items-start gap-4 px-5 py-5">
+                  <div className="w-12 h-12 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center text-lg font-bold shrink-0">
+                    {ini || <User className="h-6 w-6" />}
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className="text-[11px] text-slate-400">
-                      Synced {fmtDate(h.lastSyncedAt)}
-                    </span>
-                    {h.handle && url && (
-                      <a
-                        href={url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
-                      >
-                        <ExternalLink className="h-3.5 w-3.5" />
-                      </a>
+                  <div className="min-w-0 flex-1">
+                    <h2 className="text-base font-bold text-slate-900 truncate">{profile.name || "—"}</h2>
+                    <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5 truncate">
+                      <Mail className="h-3 w-3 shrink-0" />{profile.email || "—"}
+                    </p>
+                    {profile.batch && profile.batch !== "—" && (
+                      <p className="text-xs text-slate-600 font-medium mt-0.5">{profile.batch}</p>
                     )}
-                    {h.handle && <CheckCircle2 className="h-4 w-4 text-emerald-500" />}
+
+                    {/* Platform Handles */}
+                    {handles.length > 0 && (
+                      <div className="mt-3 space-y-1.5">
+                        {handles.map((h) => {
+                          const metaKey = Object.keys(PLATFORM_META).find((k) => h.platformName.toLowerCase().includes(k));
+                          const meta    = metaKey ? PLATFORM_META[metaKey] : null;
+                          const url     = getPlatformUrl(h.platformName, h.handle);
+                          return (
+                            <div key={h.platformId} className="flex items-center gap-2">
+                              {meta ? (
+                                <img src={meta.favicon} alt={meta.label} className="h-4 w-4 rounded object-contain shrink-0" />
+                              ) : (
+                                <div className="h-4 w-4 rounded bg-slate-100 flex items-center justify-center text-[9px] font-bold text-slate-500 shrink-0">
+                                  {(h.platformName || "?")[0].toUpperCase()}
+                                </div>
+                              )}
+                              <div className="flex-1 min-w-0">
+                                {h.handle && url ? (
+                                  <a href={url} target="_blank" rel="noreferrer"
+                                    className="text-xs text-sky-600 hover:underline font-medium truncate block">
+                                    {h.handle}
+                                  </a>
+                                ) : (
+                                  <span className="text-xs text-slate-400 italic">Not set</span>
+                                )}
+                              </div>
+                              <span className="text-[10px] text-slate-400 shrink-0">{fmtDate(h.lastSyncedAt)}</span>
+                              {h.handle && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        </div>
+
+                {/* Right: Problems Solved */}
+                <div className="px-5 py-5">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-3">
+                    Problems Solved · {totalSolved}/{totalAssigned}
+                  </p>
+                  <div className="flex items-center gap-4">
+                    <DonutChart stats={diffStats} />
+                    <div className="flex-1 space-y-2">
+                      {diffRows.map(({ key, label, dot, text }) => {
+                        const d = diffStats[key];
+                        const pct = d.total > 0 ? Math.round((d.solved / d.total) * 100) : 0;
+                        return (
+                          <div key={key}>
+                            <div className="flex items-center justify-between mb-0.5">
+                              <div className="flex items-center gap-1.5">
+                                <span className={`h-2 w-2 rounded-full ${dot}`} />
+                                <span className={`text-xs font-semibold ${text}`}>{label}</span>
+                              </div>
+                              <span className="text-xs tabular-nums text-slate-600">
+                                {d.solved}<span className="text-slate-400">/{d.total}</span>
+                              </span>
+                            </div>
+                            <div className="h-1 rounded-full bg-slate-100 overflow-hidden">
+                              <div className={`h-full rounded-full ${dot}`} style={{ width: `${pct}%` }} />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+            {/* ── Assignment Sheet (read-only student view) ── */}
+            <ReadonlyAssignmentSheet
+              assignments={assignments}
+              statuses={statuses}
+              studentId={studentId}
+            />
+          </>
+        )}
       </div>
     );
   }

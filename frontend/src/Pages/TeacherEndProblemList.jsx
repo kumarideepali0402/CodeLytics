@@ -29,11 +29,13 @@ function difficultyBadge(difficulty) {
 }
 
 export default function TeacherProblemList() {
-  const { id: batchId } = useParams();
+  const { id, batchId: batchIdParam } = useParams();
+  const batchId = id ?? batchIdParam;
   const [rawOutline, setRawOutline] = useState([]);
   const [loading, setLoading] = useState(true);
   const [batchStudents, setBatchStudents] = useState([]);
   const [statusMap, setStatusMap] = useState({});
+  const [standingsLoading, setStandingsLoading] = useState(true);
   const [openTopics, setOpenTopics] = useState({});
   const [openSubtopics, setOpenSubtopics] = useState({});
   const [searchQuery, setSearchQuery] = useState("");
@@ -43,24 +45,21 @@ export default function TeacherProblemList() {
 
   useEffect(() => {
     if (!batchId) return;
-    const fetchAll = async () => {
-      setLoading(true);
-      try {
-        const [outlineRes, standingsRes] = await Promise.all([
-          axiosClient.get(`/assignment/batch-outline/${batchId}`),
-          axiosClient.get(`/analytics/batch/${batchId}/solve-status`),
-        ]);
-        setRawOutline(outlineRes.data?.outline ?? []);
-        setBatchStudents(standingsRes.data?.students ?? []);
-        setStatusMap(standingsRes.data?.statuses ?? {});
-      } catch (error) {
-        console.error("Error fetching problem list", error);
-        handleError(error.response?.data?.msg ?? "Failed to load problem list");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchAll();
+
+    // Load outline first so the page renders immediately
+    axiosClient.get(`/assignment/batch-outline/${batchId}`)
+      .then((res) => setRawOutline(res.data?.outline ?? []))
+      .catch((err) => handleError(err.response?.data?.msg ?? "Failed to load problem list"))
+      .finally(() => setLoading(false));
+
+    // Load solve-status in the background — only needed for standings buttons
+    axiosClient.get(`/analytics/batch/${batchId}/solve-status`)
+      .then((res) => {
+        setBatchStudents(res.data?.students ?? []);
+        setStatusMap(res.data?.statuses ?? {});
+      })
+      .catch((err) => console.error("Error fetching solve status", err))
+      .finally(() => setStandingsLoading(false));
   }, [batchId]);
 
   const data = useMemo(() => {
@@ -219,7 +218,7 @@ export default function TeacherProblemList() {
                                     e.stopPropagation();
                                     if (subProblems.length > 0) setBoardModal({ tIndex, sIndex });
                                   }}
-                                  disabled={subProblems.length === 0}
+                                  disabled={subProblems.length === 0 || standingsLoading}
                                   className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white shadow-sm hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500"
                                 >
                                   <LayoutGrid className="h-3.5 w-3.5 shrink-0" aria-hidden />
@@ -281,10 +280,11 @@ export default function TeacherProblemList() {
                                                 <button
                                                   type="button"
                                                   onClick={() => setStandingsModal({ tIndex, sIndex, pIndex, problem: p, cell })}
-                                                  className="inline-flex items-center gap-1.5 rounded-lg border border-sky-200 bg-sky-50 px-2.5 py-1 text-xs font-semibold text-sky-900 hover:bg-sky-100"
+                                                  disabled={standingsLoading}
+                                                  className="inline-flex items-center gap-1.5 rounded-lg border border-sky-200 bg-sky-50 px-2.5 py-1 text-xs font-semibold text-sky-900 hover:bg-sky-100 disabled:opacity-50 disabled:cursor-wait"
                                                 >
                                                   <Users className="h-3.5 w-3.5" />
-                                                  {cell ? `${cell.solvedCount}/${cell.totalStudents}` : "—"}
+                                                  {standingsLoading ? "…" : cell ? `${cell.solvedCount}/${cell.totalStudents}` : "—"}
                                                 </button>
                                               </td>
                                             </tr>

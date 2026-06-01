@@ -31,7 +31,9 @@ export default function BatchTable() {
   const [textFilter,       setTextFilter]       = useState("");
   const [difficultyFilter, setDifficultyFilter] = useState("All");
 
-  const { id: batchId } = useParams();
+  const { id, batchId: batchIdParam } = useParams();
+  const batchId = id ?? batchIdParam;
+  const studentBasePath = id ? `/teacher/${batchId}/students` : `/batch/${batchId}/students`;
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -173,7 +175,7 @@ export default function BatchTable() {
                 {filteredStudents.map((s) => (
                   <th key={s.id} className="px-3 py-3 text-center text-xs font-semibold text-slate-500 min-w-[80px]">
                     <button
-                      onClick={() => navigate(`/teacher/${batchId}/students/${s.id}`)}
+                      onClick={() => navigate(`${studentBasePath}/${s.id}`)}
                       className="hover:text-sky-600 hover:underline transition-colors cursor-pointer flex flex-col items-center gap-0.5"
                     >
                       {s.studentEnrollmentId && (

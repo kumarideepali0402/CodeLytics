@@ -56,7 +56,8 @@ function computeMedian(arr) {
 }
 
 export default function Visual() {
-  const { id: batchId } = useParams();
+  const { id, batchId: batchIdParam } = useParams();
+  const batchId = id ?? batchIdParam;
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(null);
 

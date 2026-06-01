@@ -5,6 +5,7 @@ import {
   School,
   ListChecks,
   GraduationCap,
+  Trophy,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import axiosClient from "../utils/axiosClient";
@@ -23,6 +24,11 @@ const navItems = [
     label: "Problem list",
     icon: ListChecks,
     title: "Class standings & problem bank",
+  },
+  {
+    to: "standings",
+    label: "Standings",
+    icon: Trophy,
   },
 ];
 
