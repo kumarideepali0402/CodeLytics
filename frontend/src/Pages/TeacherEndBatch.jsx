@@ -1,7 +1,8 @@
 import { useMemo, useState, useEffect } from "react";
 import { Outlet, useLocation, useNavigate, useParams } from "react-router-dom";
-import { LayoutGrid, Trophy, BarChart3, ListChecks, Users } from "lucide-react";
+import { LayoutGrid, Trophy, BarChart3, ListChecks, Users, LogOut } from "lucide-react";
 import axiosClient from "../utils/axiosClient";
+import { useLogout } from "../utils/useLogout";
 
 const navItems = [
   {
@@ -53,6 +54,7 @@ export default function TeacherEndBatch() {
   const { id: batchId } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
+  const logout = useLogout();
   const [batchName, setBatchName] = useState(null);
 
   const activeKey = useMemo(
@@ -130,6 +132,16 @@ export default function TeacherEndBatch() {
             );
           })}
         </ul>
+        <div className="px-2 pb-3 md:px-2 md:pb-4">
+          <button
+            type="button"
+            onClick={logout}
+            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-gray-600 transition hover:bg-red-50 hover:text-red-700"
+          >
+            <LogOut className="h-5 w-5 shrink-0 text-gray-400 group-hover:text-red-500" aria-hidden />
+            <span className="text-sm font-semibold">Logout</span>
+          </button>
+        </div>
       </nav>
 
       <div className="flex-1 min-w-0 overflow-y-auto p-2 md:p-4">

@@ -3,15 +3,17 @@
 
 import { useState , useEffect} from "react";
 import { motion } from "framer-motion";
-import { BookmarkCheck } from "lucide-react";
+import { BookmarkCheck, LogOut } from "lucide-react";
 import { useNavigate } from "react-router";
 import { handleError } from "../utils/notification"
 import axiosClient from "../utils/axiosClient";
+import { useLogout } from "../utils/useLogout";
 
 
 
 export default function TeacherEnd() {
   const navigate = useNavigate();
+  const logout = useLogout();
   
 
   const [batches, setBatches] = useState([]);
@@ -69,15 +71,22 @@ export default function TeacherEnd() {
         />
       </div>
 
-      {/* Dummy full flow + Problem list */}
+      {/* Actions */}
       <div className="flex justify-end flex-wrap gap-3 mt-10">
-        
         <button
           type="button"
           onClick={() => navigate("/teacher/problems")}
           className="bg-gradient-to-r from-yellow-500 to-amber-400 px-4 py-2 text-white font-medium rounded-xl shadow-md hover:scale-105 hover:shadow-lg transition flex items-center gap-2"
         >
           My Problem List
+        </button>
+        <button
+          type="button"
+          onClick={logout}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl border border-red-200 bg-white text-red-600 font-medium shadow-sm hover:bg-red-50 hover:shadow-md transition"
+        >
+          <LogOut className="h-4 w-4" aria-hidden />
+          Logout
         </button>
       </div>
 

@@ -3,10 +3,13 @@
 import { MdGroups2 } from "react-icons/md";
 import { GiTeacher } from "react-icons/gi";
 import { useNavigate, useParams } from "react-router-dom";
+import { LogOut } from "lucide-react";
+import { useLogout } from "../utils/useLogout";
 
 export default function CollegeDashboard() {
   const navigate = useNavigate();
   const { collegeId } = useParams();
+  const logout = useLogout();
 
   const goToBatchSetting = () => {
     if (collegeId) navigate(`/batch-setting/${collegeId}`);
@@ -20,13 +23,24 @@ export default function CollegeDashboard() {
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-50 to-gray-100">
-      {/* Logo */}
-      <div className="flex justify-center py-6">
+      {/* Logo + Logout */}
+      <div className="flex justify-between items-center px-6 py-6">
+        <div className="flex-1" />
         <img
           src="/logo.png"
           alt="Codelytics Logo"
           className="w-48"
         />
+        <div className="flex-1 flex justify-end">
+          <button
+            type="button"
+            onClick={logout}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl border border-red-200 bg-white text-red-600 font-medium shadow-sm hover:bg-red-50 hover:shadow-md transition text-sm"
+          >
+            <LogOut className="h-4 w-4" aria-hidden />
+            Logout
+          </button>
+        </div>
       </div>
 
       {/* Content */}

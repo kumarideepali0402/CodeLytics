@@ -6,9 +6,11 @@ import {
   ListChecks,
   GraduationCap,
   Trophy,
+  LogOut,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import axiosClient from "../utils/axiosClient";
+import { useLogout } from "../utils/useLogout";
 
 const navItems = [
   {
@@ -45,6 +47,7 @@ export default function BatchSideLayout() {
   const [batchName, setBatchName] = useState("");
   const [loadError, setLoadError] = useState(false);
   const { batchId } = useParams();
+  const logout = useLogout();
 
   useEffect(() => {
     if (!batchId) return;
@@ -120,6 +123,16 @@ export default function BatchSideLayout() {
             );
           })}
         </nav>
+        <div className="px-2 pb-3 md:px-2 md:pb-4">
+          <button
+            type="button"
+            onClick={logout}
+            className="flex w-full min-w-[9.5rem] items-center gap-3 rounded-xl px-3 py-2.5 text-left text-slate-600 transition hover:bg-red-50 hover:text-red-700 md:min-w-0 md:w-full"
+          >
+            <LogOut className="h-5 w-5 shrink-0 text-slate-400" aria-hidden />
+            <span className="whitespace-nowrap text-sm font-semibold">Logout</span>
+          </button>
+        </div>
       </aside>
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-slate-50">

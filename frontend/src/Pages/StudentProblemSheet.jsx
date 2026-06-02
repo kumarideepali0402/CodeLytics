@@ -10,7 +10,9 @@ import {
   RefreshCw,
   AlertTriangle,
   User,
+  LogOut,
 } from "lucide-react";
+import { useLogout } from "../utils/useLogout";
 import { normalizeOutlineShape, recomputeAll } from "../utils/batchOutlineShape";
 import { displayPlatform, platformStyleClass } from "../utils/problemDisplay";
 import axiosClient from "../utils/axiosClient";
@@ -98,6 +100,7 @@ function applyProgressToOutline(topics, progressMap) {
 
 export default function StudentProblemSheet() {
   const navigate = useNavigate();
+  const logout = useLogout();
   const [batchId, setBatchId] = useState(null);
   const progressStorageId = batchId ?? "student";
 
@@ -248,17 +251,28 @@ export default function StudentProblemSheet() {
               Problem list
             </h1>
           </div>
-          <button
-            type="button"
-            onClick={() => navigate("/student/profile")}
-            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-gradient-to-br from-blue-500 to-purple-600 text-sm font-bold text-white shadow-sm transition hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300"
-            aria-label="Open student profile"
-            title="Open profile"
-          >
-            {studentName
-              ? studentName.split(" ").map((p) => p[0]).join("").slice(0, 2).toUpperCase()
-              : <User className="h-5 w-5" aria-hidden />}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => navigate("/student/profile")}
+              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-gradient-to-br from-blue-500 to-purple-600 text-sm font-bold text-white shadow-sm transition hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300"
+              aria-label="Open student profile"
+              title="Open profile"
+            >
+              {studentName
+                ? studentName.split(" ").map((p) => p[0]).join("").slice(0, 2).toUpperCase()
+                : <User className="h-5 w-5" aria-hidden />}
+            </button>
+            <button
+              type="button"
+              onClick={logout}
+              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:bg-red-50 hover:text-red-600 hover:border-red-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-300"
+              aria-label="Logout"
+              title="Logout"
+            >
+              <LogOut className="h-5 w-5" aria-hidden />
+            </button>
+          </div>
         </div>
       </div>
 
