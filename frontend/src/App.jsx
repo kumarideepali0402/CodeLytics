@@ -8,7 +8,6 @@ import Homepage from './Pages/Homepage'
 import TeacherLogin from "./Pages/TeacherLogin";
 import InstitutionLogin from "./Pages/InstitutionLogin";
 import ProtectedRoute from './Components/ProtectedRoute'
-import TeacherDashboard from './Pages/TeacherDashboard'
 import CollegeDashboard from './Pages/CollegeDashboard'
 import CollegeSetting from './Pages/CollegeSetting'
 import Entry from './Pages/Entry';
@@ -47,38 +46,27 @@ function App() {
   return (
     <>
       <Routes>
-        <Route path='/' element={<Homepage/>}></Route>
+        {/* Public routes */}
+        <Route path='/' element={<Homepage/>}/>
         <Route path='/homepage' element={<Homepage/>}/>
         <Route path='/student/login' element={<StudentLogin/>}/>
         <Route path='/teacher/login' element={<TeacherLogin/>}/>
         <Route path="/college/login" element={<InstitutionLogin />} />
-        {/* <Route
-          path="/student-dashboard"
-          element={<ProtectedRoute role="STUDENT" element={<StudentDashboard />} />}
-        /> */}
-        {/* <Route
-          path="/teacher-dashboard"
-          element={<ProtectedRoute role="TEACHER" element={<TeacherDashboard />} />}
-        /> */}
-        <Route
-          path="/teacher-dashboard"
-          element={<ProtectedRoute role="TEACHER" element={< TeacherEnd/>} />}
-        />
-        
-        <Route path='/entry' element={<Entry/>}></Route>
-        <Route path='/college-dashboard' element={<CollegeDashboard/>}/>
-        <Route path='/college-dashboard/:collegeId' element={<CollegeDashboard/>}/>
+        <Route path='/entry' element={<Entry/>}/>
 
-        
+        {/* Admin Route */}
         <Route path='/college-setting' element={<CollegeSetting/>}/>
 
-        <Route path='/batch-setting' element={<BatchSetting />} />
-        <Route path='/batch-setting/:collegeId' element={<BatchSetting />} />
-        <Route path='/teacher-setting' element={<TeacherSetting />} />
-        <Route path='/teacher-setting/:collegeId' element={<TeacherSetting />} />
-        <Route path='/teacher/teacherEdit/:id' element={<TeacherDetails/>}></Route>
+        {/* COLLEGE routes */}
+        <Route path='/college-dashboard' element={<ProtectedRoute role="COLLEGE" element={<CollegeDashboard/>}/>}/>
+        <Route path='/college-dashboard/:collegeId' element={<ProtectedRoute role="COLLEGE" element={<CollegeDashboard/>}/>}/>
+        <Route path='/batch-setting' element={<ProtectedRoute role="COLLEGE" element={<BatchSetting/>}/>}/>
+        <Route path='/batch-setting/:collegeId' element={<ProtectedRoute role="COLLEGE" element={<BatchSetting/>}/>}/>
+        <Route path='/teacher-setting' element={<ProtectedRoute role="COLLEGE" element={<TeacherSetting/>}/>}/>
+        <Route path='/teacher-setting/:collegeId' element={<ProtectedRoute role="COLLEGE" element={<TeacherSetting/>}/>}/>
+        <Route path='/teacher/teacherEdit/:id' element={<ProtectedRoute role="COLLEGE" element={<TeacherDetails/>}/>}/>
 
-        <Route path='/batch/:batchId' element={<BatchSideLayout/>}>
+        <Route path='/batch/:batchId' element={<ProtectedRoute role="COLLEGE" element={<BatchSideLayout/>}/>}>
           <Route index element={<Dashboard/>}/>
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="students" element={<Students />} />
@@ -89,9 +77,12 @@ function App() {
           <Route path="standings" element={<TeacherEndLeaderboard />} />
         </Route>
 
+        {/* TEACHER routes */}
+        <Route path="/teacher-dashboard" element={<ProtectedRoute role="TEACHER" element={<TeacherEnd/>}/>}/>
+        <Route path='/teacherEnd' element={<ProtectedRoute role="TEACHER" element={<TeacherEnd/>}/>}/>
+        <Route path='/teacher/problems' element={<ProtectedRoute role="TEACHER" element={<TeacherProblemsPage/>}/>}/>
 
-        <Route path='/teacherEnd' element={<TeacherEnd/>}></Route>
-        <Route path='/teacher/:id' element={<TeacherEndBatch />}>
+        <Route path='/teacher/:id' element={<ProtectedRoute role="TEACHER" element={<TeacherEndBatch/>}/>}>
           <Route index element={<TeacherEndContent/>}/>
           <Route path='problemslist' element={<TeacherEndProblemList/>}/>
           <Route path='content' element={<TeacherEndContent/>}/>
@@ -99,28 +90,25 @@ function App() {
           <Route path='students/:studentId' element={<StudentProfile/>}/>
           <Route path='leaderboard' element={<TeacherEndLeaderboard/>}/>
           <Route path='analytics' element={<TeacherEndAnalytics/>}>
-              <Route index element={<Visual/>}></Route>
-              <Route path='visual' element={<Visual/>}></Route>    
-              {/* Table */}
-              <Route path='tables' element={<Table/>}>
-                <Route index element={<BatchMasterTable/>}></Route>
-                <Route path='mastertable' element={<BatchMasterTable/>}></Route>
-                <Route path='weeklyProgressTable' element={<WeeklyProgressTable/>}></Route>
-              </Route>
-
+            <Route index element={<Visual/>}/>
+            <Route path='visual' element={<Visual/>}/>
+            <Route path='tables' element={<Table/>}>
+              <Route index element={<BatchMasterTable/>}/>
+              <Route path='mastertable' element={<BatchMasterTable/>}/>
+              <Route path='weeklyProgressTable' element={<WeeklyProgressTable/>}/>
+            </Route>
           </Route>
         </Route>
-        <Route path="/teacher/problems" element={<TeacherProblemsPage />} />
 
-      <Route path="/student-dashboard" element={<Navigate to="/student/assignment" replace />} />
-      <Route path='/student/assignment' element={<StudentProblemSheet/>}></Route>
-      <Route path='/student/profile' element={<StudentProfile/>}></Route>
+        {/* STUDENT routes */}
+        <Route path="/student-dashboard" element={<Navigate to="/student/assignment" replace />} />
+        <Route path='/student/assignment' element={<ProtectedRoute role="STUDENT" element={<StudentProblemSheet/>}/>}/>
+        <Route path='/student/profile' element={<ProtectedRoute role="STUDENT" element={<StudentProfile/>}/>}/>
       </Routes>
     </>
   )
 }
 
 export default App
-
 
 

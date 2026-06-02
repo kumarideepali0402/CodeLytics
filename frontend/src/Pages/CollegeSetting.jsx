@@ -1,13 +1,54 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { PlusCircle, Building2, Loader2 } from "lucide-react";
+import { PlusCircle, Building2, Loader2, ShieldCheck } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import axiosClient from "../utils/axiosClient";
 import { handleError, handleSuccess } from "../utils/notification";
 
+function PassphraseGate({ onUnlock }) {
+  const [input, setInput] = useState("");
+  const [error, setError] = useState(false);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (input === import.meta.env.VITE_ADMIN_SECRET) {
+      onUnlock();
+    } else {
+      setError(true);
+      setInput("");
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
+      <form onSubmit={handleSubmit} className="bg-white p-8 rounded-2xl shadow-md w-full max-w-sm space-y-4 border border-gray-200">
+        <div className="flex items-center gap-2 mb-2">
+          <ShieldCheck className="text-purple-600 w-6 h-6" />
+          <h2 className="text-xl font-bold text-gray-800">Admin Access</h2>
+        </div>
+        <input
+          type="password"
+          value={input}
+          onChange={(e) => { setInput(e.target.value); setError(false); }}
+          placeholder="Enter passphrase"
+          className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-100 text-sm"
+          autoFocus
+        />
+        {error && <p className="text-xs text-red-500">Incorrect passphrase.</p>}
+        <button
+          type="submit"
+          className="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-xl text-sm transition-colors"
+        >
+          Unlock
+        </button>
+      </form>
+    </div>
+  );
+}
 
 export default function CollegeSetting() {
   const navigate = useNavigate();
+  const [unlocked, setUnlocked] = useState(false);
   const [colleges, setColleges] = useState([]);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(null);
@@ -64,6 +105,8 @@ export default function CollegeSetting() {
     "from-indigo-50 to-indigo-100",
     "from-slate-50 to-slate-100",
   ];
+
+  if (!unlocked) return <PassphraseGate onUnlock={() => setUnlocked(true)} />;
 
   return (
     <div className="flex flex-col min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 mx-3 my-3 sm:mx-10 sm:my-10 rounded-2xl sm:rounded-3xl px-4 sm:px-10 py-5 shadow-md">
