@@ -41,6 +41,7 @@ export default function TeacherEndContent() {
   // ── New-topic form ─────────────────────────────────────────────────────────
   const [newTopicMode, setNewTopicMode] = useState(false);
   const [newTopicTitle, setNewTopicTitle] = useState("");
+  const [savingTopic, setSavingTopic] = useState(false);
 
   // ── New-subtopic form ──────────────────────────────────────────────────────
   const [addSubtopicForTopic, setAddSubtopicForTopic] = useState(false);
@@ -189,6 +190,7 @@ export default function TeacherEndContent() {
       handleError("Topic name is required");
       return;
     }
+    setSavingTopic(true);
     try {
       const res = await axiosClient.post("/assignment/create-topic", { name: t });
       const created = res.data?.topic; // { id, name, createdBy }
@@ -204,6 +206,8 @@ export default function TeacherEndContent() {
       setNewTopicMode(false);
     } catch (err) {
       handleError(err?.response?.data?.msg || "Failed to create topic");
+    } finally {
+      setSavingTopic(false);
     }
   };
 
@@ -360,23 +364,37 @@ export default function TeacherEndContent() {
                         <input
                           type="text"
                           placeholder="Topic title"
-                          className="w-full rounded-md border border-slate-200 px-2 py-1.5 text-sm"
+                          className="w-full rounded-md border border-slate-200 px-2 py-1.5 text-sm disabled:opacity-60"
                           value={newTopicTitle}
                           onChange={(e) => setNewTopicTitle(e.target.value)}
+                          disabled={savingTopic}
                           autoFocus
                         />
                         <div className="flex gap-1.5">
                           <button
                             type="button"
                             onClick={addTopic}
-                            className="flex-1 rounded-md bg-slate-900 py-1.5 text-xs font-medium text-white hover:bg-slate-800"
+                            disabled={savingTopic}
+                            className="inline-flex flex-1 items-center justify-center gap-1 rounded-md bg-slate-900 py-1.5 text-xs font-medium text-white hover:bg-slate-800 disabled:opacity-60 disabled:cursor-not-allowed"
                           >
-                            Add
+                            {savingTopic ? (
+                              <>
+                                <span className="inline-flex gap-0.5">
+                                  <span className="animate-bounce [animation-delay:0ms]">·</span>
+                                  <span className="animate-bounce [animation-delay:150ms]">·</span>
+                                  <span className="animate-bounce [animation-delay:300ms]">·</span>
+                                </span>
+                                Saving…
+                              </>
+                            ) : (
+                              "Add"
+                            )}
                           </button>
                           <button
                             type="button"
+                            disabled={savingTopic}
                             onClick={() => { setNewTopicMode(false); setNewTopicTitle(""); }}
-                            className="rounded-md border border-slate-200 px-2 py-1.5 text-xs text-slate-600"
+                            className="rounded-md border border-slate-200 px-2 py-1.5 text-xs text-slate-600 disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             Cancel
                           </button>
