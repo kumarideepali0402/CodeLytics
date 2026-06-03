@@ -2,6 +2,7 @@ import prisma from "../db/prisma.js";
 import crypto from "crypto"
 import { cfCheck } from "../utils/checkers/cfChecker.js";
 import cacheCheck from'../utils/checkers/cacheChecker.js'
+import { extractPlatformId } from "../utils/extractPlatformId.js"
 
 
 export const getHandles = async(req, res) => {
@@ -243,7 +244,14 @@ export const extSync = async(req, res) =>{
 
         console.log(`[extSync] platform=${platform} solvedIds=${solvedIds.length} assignments=${assignments.length}`);
 
-        const results = cacheCheck(new Set(solvedIds), assignments, platform);
+        const solvedSet = new Set(solvedIds);
+        const slugDebug = assignments.map(a => {
+            const slug = extractPlatformId(a.problem.link, platform);
+            return { title: a.problem.title, link: a.problem.link, slug, matched: solvedSet.has(slug) };
+        });
+        slugDebug.forEach(d => console.log(`[extSync] slug="${d.slug}" matched=${d.matched} title="${d.title}" link="${d.link}"`));
+
+        const results = cacheCheck(solvedSet, assignments, platform);
 
         console.log(`[extSync] solved matches:`, results.filter(r => r.solved).map(r => r.problemTitle));
 
@@ -256,12 +264,12 @@ export const extSync = async(req, res) =>{
                 })
             )
         )
-        return res.status(200).json({ msg: `${platform} sync complete`, results });
+        return res.status(200).json({ msg: `${platform} sync complete`, results, _debug: slugDebug });
 
         
     } catch (error) {
-        console.log(error);
-       return res.status(500).json({ msg: "Internal Server Error" });
+        console.error("[extSync error]", error);
+        return res.status(500).json({ msg: error?.message ?? "Internal Server Error" });
 
         
         

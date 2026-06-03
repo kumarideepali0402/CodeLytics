@@ -3,23 +3,25 @@
     "name" : "Codelytics Sync",
     "version" : "1.0",
     "description" : "Sync your Leetcode and GFG submissions to Codelytics",
-    "permissions" : ["storage", "cookies", "scripting", "tabs"],
-    
-    "host_permissions":[
-        "https://leetcode.com/*",
-        "https://www.geeksforgeeks.org/*",
-        "https://practiceapi.geeksforgeeks.org/*",
-        "https://auth.geeksforgeeks.org/*",
-        "http://localhost:*/*",
-        "https://*/*"
+    "permissions": ["storage", "cookies", "tabs"],
+
+    "host_permissions": [
+        "<all_urls>"
     ],
-    "background" : {
-        "service_worker" : "background.js"
+
+    "content_scripts": [{
+        "matches": ["*://*.geeksforgeeks.org/*", "*://geeksforgeeks.org/*"],
+        "js": ["content.js"],
+        "run_at": "document_idle"
+    }],
+
+    "background": {
+        "service_worker": "background.js"
     },
 
-    "action" : {
-        "default_popup" : "popup.html",
-        "default_title" : "Codelytics Sync"
+    "action": {
+        "default_popup": "popup.html",
+        "default_title": "Codelytics Sync"
     }
 
 }

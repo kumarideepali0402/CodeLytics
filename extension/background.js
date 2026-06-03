@@ -17,7 +17,8 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
 
 const syncLeetCode= async() => {
-    const {backendUrl, syncToken} = await chrome.storage.local.get(["backendUrl", "syncToken"]);
+    let {backendUrl, syncToken} = await chrome.storage.local.get(["backendUrl", "syncToken"]);
+    backendUrl = (backendUrl ?? "").replace(/\/+$/, "");
     const sessionCookie = await chrome.cookies.get({ url: "https://leetcode.com", name: "LEETCODE_SESSION"});
     const csrfCookie = await chrome.cookies.get({url:"https://leetcode.com", name: "csrftoken"});
     if(!sessionCookie) throw new Error("Not logged into Leetcode")
@@ -147,19 +148,78 @@ const syncLeetCode= async() => {
 // }
 
 const syncGFG = async() => {
-    const {backendUrl, syncToken, gfgHandle} =await chrome.storage.local.get(["backendUrl", "syncToken", "gfgHandle"]);
-    if(!gfgHandle) {
-        throw new Error("GFG handle is required")
+    let {backendUrl, syncToken, gfgHandle} = await chrome.storage.local.get(["backendUrl", "syncToken", "gfgHandle"]);
+    backendUrl = (backendUrl ?? "").replace(/\/+$/, "");
+    if (!gfgHandle) throw new Error("GFG username not set — reset extension settings and add your GFG handle");
+
+    // Open a hidden GFG tab — this guarantees the content script is freshly injected
+    const tab = await chrome.tabs.create({ url: "https://www.geeksforgeeks.org/", active: false });
+
+    // Wait for the tab to fully load so the content script has run
+    await new Promise(resolve => {
+        if (tab.status === "complete") { resolve(); return; }
+        const onUpdated = (tabId, info) => {
+            if (tabId === tab.id && info.status === "complete") {
+                chrome.tabs.onUpdated.removeListener(onUpdated);
+                resolve();
+            }
+        };
+        chrome.tabs.onUpdated.addListener(onUpdated);
+    });
+
+    // Retry a few times — content script registers its listener just after load
+    const sendMsg = () => new Promise((resolve, reject) => {
+        chrome.tabs.sendMessage(tab.id, { type: "GFG_FETCH_SUBMISSIONS", handle: gfgHandle }, res => {
+            if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError.message));
+            else resolve(res);
+        });
+    });
+
+    let response;
+    for (let i = 0; i < 5; i++) {
+        try {
+            response = await sendMsg();
+            break;
+        } catch {
+            if (i === 4) {
+                chrome.tabs.remove(tab.id);
+                throw new Error("GFG content script failed to load — make sure you are logged into GeeksForGeeks");
+            }
+            await new Promise(r => setTimeout(r, 400));
+        }
     }
 
-    const tab = await chrome.tabs.query({url: "*://*/geeksforgeeks.org/*"})
-    if(tabs.length === 0)  throw new Error ("open one gfg tab");
-    const handle = gfgHandle;
-    const [{result: data}] = await chrome.scripting.executescript({
-        target = {tabId = tabs[0].id},
-        func: async(userhandle) => {
-            
-        }
-    })
+    chrome.tabs.remove(tab.id);
 
+    if (!response?.success) throw new Error(response?.error ?? "GFG fetch failed");
+
+    const json = response.data;
+    if (!json.result || json.status !== "success") throw new Error(json.message ?? "GFG API error");
+
+    const solvedIds = [];
+    for (const difficulty of Object.values(json.result)) {
+        for (const problem of Object.values(difficulty)) {
+            solvedIds.push(problem.slug.replace(/-{1,2}\d+$/, ''));
+        }
+    }
+
+    const backendRes = await fetch(`${backendUrl}/api/student/ext-sync`, {
+        method: "POST",
+        headers: {
+            "Content-type": "application/json",
+            "Authorization": `Bearer ${syncToken}`
+        },
+        body: JSON.stringify({ platform: "geeksforgeeks", solvedIds })
+    });
+
+    if (!backendRes.ok) {
+        let msg = `Backend error ${backendRes.status}`;
+        try {
+            const err = await backendRes.json();
+            msg = err.msg ?? msg;
+        } catch {}
+        throw new Error(msg);
+    }
+
+    return { count: solvedIds.length };
 }

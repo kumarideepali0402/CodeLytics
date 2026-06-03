@@ -108,6 +108,7 @@ export default function StudentProblemSheet() {
   const [loading, setLoading] = useState(true);
   const [cfHandle, setCfHandle] = useState(null);
   const [syncing, setSyncing] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [studentName, setStudentName] = useState("");
 
   const [progressMap, setProgressMap] = useState(() => loadStudentProgress(progressStorageId));
@@ -166,6 +167,15 @@ export default function StudentProblemSheet() {
   }, []);
 
   useEffect(() => { fetchOutline(); }, [fetchOutline]);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await fetchOutline();
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const handleSyncCF = async () => {
     setSyncing(true);
@@ -370,6 +380,16 @@ export default function StudentProblemSheet() {
                     <option value="unsolved">Unsolved</option>
                   </select>
                 </div>
+                <button
+                  type="button"
+                  onClick={handleRefresh}
+                  disabled={refreshing || loading}
+                  title="Refresh solved status (use after LeetCode extension sync)"
+                  className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:opacity-50"
+                >
+                  <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} aria-hidden />
+                  {refreshing ? "Refreshing…" : "Refresh"}
+                </button>
                 {hasCFProblems && (
                   <button
                     type="button"
