@@ -1,5 +1,9 @@
 # CodeLytics
 
+## Demo
+
+[![Watch the demo](https://img.youtube.com/vi/aiTCEGl5ljU/maxresdefault.jpg)](https://youtu.be/aiTCEGl5ljU)
+
 A full-stack platform for colleges to track student performance on competitive programming problems across LeetCode, Codeforces, and GeeksforGeeks. Teachers assign topic-wise problems, students track their progress, and institutions get a unified leaderboard and analytics view.
 
 ---
@@ -35,6 +39,7 @@ A full-stack platform for colleges to track student performance on competitive p
 - Reads your existing platform session — no credentials stored
 - Uses a dedicated sync token (separate from your JWT) for secure extension auth
 - Sync token generated from your student dashboard, can be rotated independently
+- GFG sync runs via a content script injected into geeksforgeeks.org pages (uses page session cookies + CSRF token directly, no `scripting` permission needed)
 
 ---
 
@@ -86,7 +91,8 @@ CodeLytics/
 │
 ├── extension/              # Chrome MV3 extension
 │   ├── manifest.json       # Permissions, service worker declaration
-│   ├── background.js       # Sync logic (LeetCode + GFG)
+│   ├── background.js       # Sync logic (LeetCode + GFG orchestration)
+│   ├── content.js          # GFG content script (fetches submissions using page session)
 │   ├── popup.html          # Setup form UI
 │   └── popup.js            # Popup event handlers, chrome.storage
 │
@@ -144,6 +150,7 @@ Create a `.env` file in the `frontend/` directory:
 
 ```env
 VITE_BASE_URL=http://localhost:3000
+VITE_ADMIN_SECRET=your_admin_passphrase   # gates access to /college-setting
 ```
 
 Start the dev server:
